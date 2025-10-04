@@ -266,6 +266,7 @@ async function placeOrder(event) {
     
     const tableNumber = document.getElementById('tableNumber').value;
     const customerName = document.getElementById('customerName').value;
+    const mobile = document.getElementById('mobile').value;
     const email = document.getElementById('email').value;
     
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -273,7 +274,8 @@ async function placeOrder(event) {
     const orderData = {
         tableNumber,
         customerName,
-        email,
+        mobile,
+        email: email || null, // Email is optional now
         items: cart,
         total
     };

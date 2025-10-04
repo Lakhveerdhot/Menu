@@ -20,10 +20,7 @@ app.use(express.json());
 // In-memory storage for orders (in production, use a database)
 const orders = [];
 
-console.log('🔧 Configuration:');
-console.log(`   Google Sheets: ENABLED (menu1 sheet)`);
-console.log(`   Restaurant: ${process.env.RESTAURANT_NAME || 'My Restaurant'}`);
-console.log(`   Sheet URL: ${process.env.MENU_SHEET_URL ? 'Configured ✓' : 'NOT SET ✗'}`);
+// Configuration loaded
 
 // API Routes
 
@@ -48,7 +45,6 @@ app.get('/api/menu', async (req, res) => {
             });
         }
 
-        console.log('📊 Fetching menu from Google Sheets "menu1"...');
         const menuItems = await fetchMenuFromSheets(process.env.MENU_SHEET_URL);
         console.log(`✅ Loaded ${menuItems.length} items from Google Sheets`);
 
@@ -69,13 +65,8 @@ app.get('/api/menu', async (req, res) => {
 
 // Place Order - Save to Google Sheets
 app.post('/api/orders', async (req, res) => {
-    console.log('\n\n========================================');
-    console.log('🛒🛒🛒 NEW ORDER RECEIVED! 🛒🛒🛒');
-    console.log('========================================\n');
-    
     try {
-        const { tableNumber, customerName, email, items, total } = req.body;
-        console.log('📋 Order Details:', { tableNumber, customerName, email, itemCount: items.length, total });
+        const { tableNumber, customerName, mobile, email, items, total } = req.body;
 
         // Validate required fields
         if (!tableNumber || !items || items.length === 0) {
@@ -85,15 +76,21 @@ app.post('/api/orders', async (req, res) => {
             });
         }
 
-        if (!email) {
+        if (!customerName) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Email is required' 
+                error: 'Customer name is required' 
+            });
+        }
+
+        if (!mobile) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Mobile number is required' 
             });
         }
 
         const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-        console.log('⏰ Timestamp:', timestamp);
         
         // Format items for Google Sheets
         const itemsString = items.map(item => 
@@ -103,8 +100,9 @@ app.post('/api/orders', async (req, res) => {
         const orderData = {
             timestamp,
             tableNumber,
-            customerName: customerName || 'N/A',
-            email: email,
+            customerName: customerName,
+            mobile: mobile,
+            email: email || 'N/A',
             items: itemsString,
             total: `₹${total.toFixed(2)}`
         };
@@ -116,13 +114,11 @@ app.post('/api/orders', async (req, res) => {
                 const response = await axios.post(process.env.ORDERS_WEBHOOK_URL, orderData, {
                     headers: { 'Content-Type': 'application/json' }
                 });
-                console.log(`✅ Order saved to Google Sheets - Table ${tableNumber}`);
+                console.log(`✅ Order saved to Google Sheets`);
             } catch (webhookError) {
                 console.error('⚠️  Failed to save to Google Sheets:', webhookError.message);
                 // Continue anyway - order is still processed
             }
-        } else {
-            console.log('⚠️  ORDERS_WEBHOOK_URL not configured - order not saved to sheets');
         }
 
         // Also save to local file as backup
@@ -136,13 +132,8 @@ app.post('/api/orders', async (req, res) => {
         orders.push(order);
         saveOrdersToFile();
 
-        // Send email confirmation
-        console.log('🔍 Checking email config...');
-        console.log('EMAIL_USER:', process.env.EMAIL_USER);
-        console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? 'Set' : 'Not Set');
-        
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-            console.log('📧 Attempting to send email to:', email);
+        // Send email confirmation (only if email is provided)
+        if (email && email !== 'N/A' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
             try {
                 await sendOrderConfirmation({
                     orderId: order.id,
@@ -153,14 +144,10 @@ app.post('/api/orders', async (req, res) => {
                     total: total,
                     timestamp: timestamp
                 });
-                console.log('✅ Email sent successfully to:', email);
+                console.log('✅ Email sent successfully');
             } catch (emailError) {
                 console.error('❌ Failed to send email:', emailError.message);
-                console.error('Full error:', emailError);
-                // Continue anyway - order is still placed
             }
-        } else {
-            console.log('⚠️  Email not configured - skipping email notification');
         }
 
         res.json({ 
@@ -170,8 +157,7 @@ app.post('/api/orders', async (req, res) => {
             timestamp: timestamp
         });
     } catch (error) {
-        console.error('❌❌❌ ERROR PLACING ORDER:', error.message);
-        console.error('Full error stack:', error.stack);
+        console.error('❌ ERROR:', error.message);
         res.status(500).json({ success: false, error: 'Failed to place order: ' + error.message });
     }
 });
@@ -216,8 +202,6 @@ app.patch('/api/orders/:orderId', (req, res) => {
     order.status = status;
     saveOrdersToFile();
 
-    console.log(`📝 Order ${orderId} status updated to: ${status}`);
-
     res.json({ success: true, data: order });
 });
 
@@ -245,7 +229,6 @@ function loadOrdersFromFile() {
             const data = fs.readFileSync(ordersFile, 'utf8');
             const loadedOrders = JSON.parse(data);
             orders.push(...loadedOrders);
-            console.log(`📦 Loaded ${orders.length} previous orders`);
         }
     } catch (error) {
         console.error('Error loading orders from file:', error);
@@ -293,20 +276,11 @@ cron.schedule('0 0 * * *', async () => {
     timezone: "Asia/Kolkata"
 });
 
-console.log('🕐 Daily cleanup scheduled for 12:00 AM IST');
+// Daily cleanup scheduled
 
 // Start server
 loadOrdersFromFile();
 
 app.listen(PORT, () => {
-    console.log(`\n🚀 Backend server running on http://localhost:${PORT}`);
-    console.log(`📱 API endpoints available at http://localhost:${PORT}/api`);
-    console.log(`\n💡 Tip: Make sure your Google Sheet "menu1" is publicly accessible`);
-    if (process.env.ORDERS_WEBHOOK_URL) {
-        console.log(`📝 Orders will be saved to Google Sheets`);
-    } else {
-        console.log(`⚠️  Orders webhook not configured - orders saved to local file only`);
-    }
-    console.log('🧹 Auto-cleanup: Orders will be cleared daily at midnight');
-    console.log('');
+    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
 });
