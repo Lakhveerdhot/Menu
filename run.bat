@@ -5,7 +5,7 @@ echo.
 
 start /B cmd /c "cd backend && node server.js" 2>nul
 timeout /t 3 /nobreak > nul
-start /B cmd /c "cd frontend && python -m http.server 8080" 2>nul
+start /B cmd /c "cd frontend && npx http-server -p 8080 -c-1" 2>nul
 timeout /t 2 /nobreak > nul
 
 echo ✅ Backend running on: http://localhost:5000

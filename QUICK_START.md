@@ -2,7 +2,7 @@
 
 ## Get Running in 5 Minutes! ⚡
 
-### Step 1: Setup Backend (2 minutes)
+### Step 1: Install Dependencies (2 minutes)
 
 ```powershell
 # Navigate to backend folder
@@ -11,38 +11,31 @@ cd backend
 # Install dependencies
 npm install
 
-# Create environment file
-copy .env.example .env
-
-# Start the server
-npm run dev
+# Go back to root
+cd ..
 ```
 
-✅ Backend running on `http://localhost:5000`
-
-### Step 2: Setup Frontend (2 minutes)
-
-Open a **new terminal**:
+### Step 2: Configure Backend (1 minute)
 
 ```powershell
-# Navigate to frontend folder
-cd frontend
-
-# Serve the frontend (choose one method)
-
-# Option A: Using Python
-python -m http.server 8080
-
-# Option B: Using Node
-npx http-server -p 8080
-
-# Option C: Use VS Code Live Server extension
-# Right-click index.html > "Open with Live Server"
+# Create environment file
+copy backend\.env.example backend\.env
 ```
 
-✅ Frontend running on `http://localhost:8080`
+Edit `backend/.env` and add your Google Sheets URL.
 
-### Step 3: Test It! (1 minute)
+### Step 3: Start Everything (1 minute)
+
+From the root folder:
+
+```powershell
+npm start
+```
+
+✅ Both servers start automatically!
+✅ Website opens in your browser at `http://localhost:8080`
+
+### Step 4: Test It! (1 minute)
 
 1. Open browser: `http://localhost:8080`
 2. You should see the restaurant menu

@@ -43,12 +43,17 @@ menu/
 
 ## 🚀 Quick Start
 
-### 1. Setup Backend
+### 1. Install Backend Dependencies
 
 ```powershell
 cd backend
 npm install
-copy .env.example .env
+```
+
+### 2. Configure Backend
+
+```powershell
+copy backend\.env.example backend\.env
 ```
 
 Edit `backend/.env`:
@@ -59,31 +64,19 @@ RESTAURANT_NAME=My Restaurant
 RESTAURANT_TAGLINE=Delicious Food, Great Service
 ```
 
-Start backend:
+### 3. Start Everything
+
+From the root folder:
 ```powershell
-npm run dev
+npm start
 ```
 
-Backend runs on `http://localhost:5000`
+This will automatically:
+- ✅ Start backend server on `http://localhost:5000`
+- ✅ Start frontend server on `http://localhost:8080`
+- ✅ Open website in your browser
 
-### 2. Setup Frontend
-
-Open another terminal:
-
-```powershell
-cd frontend
-```
-
-Edit `frontend/script.js` line 2 to set backend URL (already set to `http://localhost:5000`)
-
-Serve frontend using any method:
-- **VS Code Live Server** extension
-- **Python:** `python -m http.server 8080`
-- **Node:** `npx http-server -p 8080`
-
-Frontend runs on `http://localhost:8080` (or your chosen port)
-
-### 3. Test the System
+### 4. Test the System
 
 1. Open `http://localhost:8080` in browser
 2. Browse menu items

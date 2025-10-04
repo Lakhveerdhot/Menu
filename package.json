@@ -1,27 +1,14 @@
 {
-  "name": "restaurant-qr-menu",
+  "name": "restaurant-menu-system",
   "version": "1.0.0",
-  "description": "QR Code based restaurant menu ordering system with Google Sheets integration",
-  "main": "server.js",
+  "description": "Restaurant QR Menu Ordering System",
   "scripts": {
-    "start": "node start.js",
-    "dev": "nodemon server.js"
+    "start": "node start-servers.js",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npx http-server -p 8080 -c-1",
+    "install-all": "cd backend && npm install"
   },
-  "keywords": [
-    "restaurant",
-    "menu",
-    "qr-code",
-    "ordering"
-  ],
+  "keywords": ["restaurant", "menu", "qr-code"],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^4.21.2",
-    "googleapis": "^128.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
-  }
+  "license": "ISC"
 }

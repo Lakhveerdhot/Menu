@@ -18,15 +18,9 @@ You can use any static file server. Options:
 - Right-click on `index.html`
 - Select "Open with Live Server"
 
-### Option 2: Python HTTP Server
+### Option 2: Node.js HTTP Server
 ```powershell
-python -m http.server 8080
-```
-Then open `http://localhost:8080`
-
-### Option 3: Node.js HTTP Server
-```powershell
-npx http-server -p 8080
+npx http-server -p 8080 -c-1
 ```
 Then open `http://localhost:8080`
 
