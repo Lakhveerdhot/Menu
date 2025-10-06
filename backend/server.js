@@ -6,7 +6,7 @@ const fs = require('fs');
 const cron = require('node-cron');
 const { fetchMenuFromSheets } = require('./utils/sheetsHelper');
 const { sendOrderConfirmation } = require('./utils/emailService');
-const { performDailyCleanup, clearInMemoryOrders } = require('./utils/cleanupService');
+const { checkAndRotateSheet, getSheetStats } = require('./utils/sheetRotationService');
 
 dotenv.config();
 
@@ -107,14 +107,17 @@ app.post('/api/orders', async (req, res) => {
             total: `₹${total.toFixed(2)}`
         };
 
-        // Send to Google Sheets via webhook
+        // Send to Google Sheets via webhook with automatic sheet rotation
         if (process.env.ORDERS_WEBHOOK_URL) {
             try {
-                const axios = require('axios');
-                const response = await axios.post(process.env.ORDERS_WEBHOOK_URL, orderData, {
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                console.log(`✅ Order saved to Google Sheets`);
+                const sheetResult = await checkAndRotateSheet(process.env.ORDERS_WEBHOOK_URL, orderData);
+                if (sheetResult.success) {
+                    if (sheetResult.newSheetCreated) {
+                        console.log(`🎉 NEW SHEET CREATED: ${sheetResult.sheetName}`);
+                    }
+                } else {
+                    console.error('⚠️  Failed to save to Google Sheets:', sheetResult.error);
+                }
             } catch (webhookError) {
                 console.error('⚠️  Failed to save to Google Sheets:', webhookError.message);
                 // Continue anyway - order is still processed
@@ -139,6 +142,7 @@ app.post('/api/orders', async (req, res) => {
                     orderId: order.id,
                     tableNumber: order.tableNumber,
                     customerName: order.customerName || 'Valued Customer',
+                    mobile: mobile,
                     email: email,
                     items: items,
                     total: total,
@@ -235,23 +239,23 @@ function loadOrdersFromFile() {
     }
 }
 
-// Manual cleanup endpoint (for testing)
-app.post('/api/cleanup/manual', async (req, res) => {
+// Get Sheet Statistics
+app.get('/api/sheets/stats', async (req, res) => {
     try {
-        console.log('🧹 Manual cleanup triggered by API request');
-        await performDailyCleanup();
-        clearInMemoryOrders(orders);
-        
-        res.json({
-            success: true,
-            message: 'Manual cleanup completed successfully',
-            timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-        });
+        if (!process.env.ORDERS_WEBHOOK_URL) {
+            return res.status(400).json({
+                success: false,
+                error: 'Orders webhook URL not configured'
+            });
+        }
+
+        const stats = await getSheetStats(process.env.ORDERS_WEBHOOK_URL);
+        res.json(stats);
     } catch (error) {
-        console.error('❌ Manual cleanup failed:', error);
+        console.error('❌ Error getting sheet stats:', error);
         res.status(500).json({
             success: false,
-            error: 'Cleanup failed: ' + error.message
+            error: 'Failed to get sheet statistics: ' + error.message
         });
     }
 });
@@ -263,20 +267,12 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         googleSheets: 'enabled',
         ordersWebhook: process.env.ORDERS_WEBHOOK_URL ? 'configured' : 'not configured',
-        autoCleanup: 'enabled (daily at 12:00 AM IST)'
+        dataRetention: 'permanent (auto-creates new sheet at 10,000 rows)'
     });
 });
 
-// Schedule daily cleanup at midnight (12:00 AM IST)
-cron.schedule('0 0 * * *', async () => {
-    console.log('\n⏰ Midnight cleanup triggered...');
-    await performDailyCleanup();
-    clearInMemoryOrders(orders);
-}, {
-    timezone: "Asia/Kolkata"
-});
-
-// Daily cleanup scheduled
+// Automatic cleanup removed - all order data is now kept permanently
+// New sheets are created automatically when current sheet reaches 10,000 rows
 
 // Start server
 loadOrdersFromFile();

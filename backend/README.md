@@ -58,10 +58,22 @@ The system loads menu from Google Sheets:
 - `POST /api/orders` - Place a new order
 - `GET /api/orders` - Get all orders (for restaurant owner)
 - `PATCH /api/orders/:orderId` - Update order status
+- `GET /api/sheets/stats` - Get Google Sheets statistics (row counts, sheet info)
 - `GET /api/health` - Health check
 
+## Data Storage & Retention
 
+### Local Storage
 Orders are stored in `backend/data/orders.json` file for persistence.
+
+### Google Sheets - Automatic Sheet Rotation
+**All order data is kept permanently - no automatic deletion!**
+
+- Orders are saved to Google Sheets via webhook
+- When a sheet reaches **10,000 rows**, a new sheet is automatically created
+- Sheet naming: `Orders_1`, `Orders_2`, `Orders_3`, etc.
+- All previous sheets remain intact with their data
+- See `GOOGLE_APPS_SCRIPT_SHEET_ROTATION.md` for setup instructions
 
 ## Editing Menu
 

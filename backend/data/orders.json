@@ -28,5 +28,35 @@
     ],
     "total": 650,
     "status": "pending"
+  },
+  {
+    "id": "ORD-1759728809698",
+    "timestamp": "6/10/2025, 11:03:22 am",
+    "tableNumber": "12",
+    "customerName": "lakhveer",
+    "mobile": "9336990939",
+    "email": "lakhveerdhot120@gmail.com",
+    "items": [
+      {
+        "id": "1",
+        "name": "Butter Chicken",
+        "description": "Creamy tomato-based curry with spices",
+        "price": 400,
+        "category": "Main Course",
+        "image": "",
+        "quantity": 1
+      },
+      {
+        "id": "2",
+        "name": "Paneer Tikka",
+        "description": "Grilled cottage cheese cubes",
+        "price": 250,
+        "category": "Starters",
+        "image": "",
+        "quantity": 1
+      }
+    ],
+    "total": 650,
+    "status": "pending"
   }
 ]
