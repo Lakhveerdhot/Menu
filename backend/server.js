@@ -135,31 +135,32 @@ app.post('/api/orders', async (req, res) => {
         orders.push(order);
         saveOrdersToFile();
 
-        // Send email confirmation (only if email is provided)
-        if (email && email !== 'N/A' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-            try {
-                await sendOrderConfirmation({
-                    orderId: order.id,
-                    tableNumber: order.tableNumber,
-                    customerName: order.customerName || 'Valued Customer',
-                    mobile: mobile,
-                    email: email,
-                    items: items,
-                    total: total,
-                    timestamp: timestamp
-                });
-                console.log('✅ Email sent successfully');
-            } catch (emailError) {
-                console.error('❌ Failed to send email:', emailError.message);
-            }
-        }
-
+        // Send response immediately to customer
         res.json({ 
             success: true, 
             message: 'Order placed successfully!',
             orderId: order.id,
             timestamp: timestamp
         });
+
+        // Send email confirmation asynchronously (non-blocking)
+        if (email && email !== 'N/A' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+            // Don't await - send in background
+            sendOrderConfirmation({
+                orderId: order.id,
+                tableNumber: order.tableNumber,
+                customerName: order.customerName || 'Valued Customer',
+                mobile: mobile,
+                email: email,
+                items: items,
+                total: total,
+                timestamp: timestamp
+            }).then(() => {
+                console.log('✅ Email sent successfully');
+            }).catch(emailError => {
+                console.error('❌ Failed to send email:', emailError.message);
+            });
+        }
     } catch (error) {
         console.error('❌ ERROR:', error.message);
         res.status(500).json({ success: false, error: 'Failed to place order: ' + error.message });

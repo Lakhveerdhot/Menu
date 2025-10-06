@@ -282,16 +282,23 @@ async function placeOrder(event) {
     
     const placeOrderBtn = document.getElementById('placeOrderBtn');
     placeOrderBtn.disabled = true;
-    placeOrderBtn.textContent = 'Placing Order...';
+    placeOrderBtn.textContent = '⏳ Placing Order...';
     
     try {
+        // Add timeout for better UX
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
         const response = await fetch(`${API_BASE_URL}/api/orders`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(orderData)
+            body: JSON.stringify(orderData),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         const data = await response.json();
         
@@ -308,16 +315,20 @@ async function placeOrder(event) {
             // Reset form
             document.getElementById('orderForm').reset();
             
-            // Redirect to view-order page after 1 second
+            // Redirect to view-order page after 2 seconds
             setTimeout(() => {
                 window.location.href = `view-order.html?orderId=${data.orderId}`;
-            }, 1000);
+            }, 2000);
         } else {
             alert('Failed to place order: ' + data.error);
         }
     } catch (error) {
         console.error('Error placing order:', error);
-        alert('Error placing order. Please try again.');
+        if (error.name === 'AbortError') {
+            alert('⚠️ Request timeout. Backend might be starting up (takes 30-60 seconds on first request). Please try again.');
+        } else {
+            alert('❌ Error placing order. Please check your connection and try again.');
+        }
     } finally {
         placeOrderBtn.disabled = false;
         placeOrderBtn.textContent = 'Place Order';
