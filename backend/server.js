@@ -158,8 +158,11 @@ app.post('/api/orders', async (req, res) => {
             }).then(() => {
                 console.log('✅ Email sent successfully');
             }).catch(emailError => {
-                console.error('❌ Failed to send email:', emailError.message);
+                console.error('⚠️ Email failed (non-critical):', emailError.message);
+                // Order still successful even if email fails
             });
+        } else {
+            console.log('⚠️ Email not configured - skipping email notification');
         }
     } catch (error) {
         console.error('❌ ERROR:', error.message);

@@ -318,7 +318,7 @@ async function placeOrder(event) {
             // Redirect to view-order page after 2 seconds
             setTimeout(() => {
                 window.location.href = `view-order.html?orderId=${data.orderId}`;
-            }, 2000);
+            }, 1000);
         } else {
             alert('Failed to place order: ' + data.error);
         }
