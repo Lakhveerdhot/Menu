@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: restaurant-menu-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RESTAURANT_NAME
+        sync: false
+      - key: RESTAURANT_TAGLINE
+        sync: false
+      - key: MENU_SHEET_URL
+        sync: false
+      - key: ORDERS_WEBHOOK_URL
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: OWNER_EMAIL
+        sync: false

@@ -1,5 +1,5 @@
-// API Base URL - Change this to your backend URL
-const API_BASE_URL = 'http://localhost:5000';
+// API Base URL - Loaded from config.js
+const API_BASE_URL = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'http://localhost:5000';
 
 // Global state
 let cart = [];

@@ -1,0 +1,9 @@
+{
+  "name": "restaurant-menu-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for restaurant menu ordering system",
+  "scripts": {
+    "build": "node inject-env.js",
+    "dev": "echo 'No build needed for static site'"
+  }
+}
