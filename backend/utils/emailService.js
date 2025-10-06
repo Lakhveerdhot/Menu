@@ -1,4 +1,10 @@
 const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
+
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 // Create email transporter with explicit SMTP settings for Render compatibility
 function createTransporter() {
@@ -22,6 +28,11 @@ function createTransporter() {
 // Send order confirmation email to customer
 async function sendOrderConfirmation(orderDetails) {
     try {
+        // Use SendGrid if available, otherwise fall back to Gmail
+        if (process.env.SENDGRID_API_KEY) {
+            return await sendWithSendGrid(orderDetails);
+        }
+        
         const transporter = createTransporter();
         
         // Customer email HTML
@@ -212,6 +223,137 @@ async function sendOrderConfirmation(orderDetails) {
         
     } catch (error) {
         console.error('❌ Error sending email:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Send emails using SendGrid (more reliable on Render)
+async function sendWithSendGrid(orderDetails) {
+    try {
+        const restaurantName = process.env.RESTAURANT_NAME || 'Our Restaurant';
+        const fromEmail = process.env.EMAIL_USER || 'noreply@restaurant.com';
+        
+        // Simple text email for customer
+        const customerMsg = {
+            to: orderDetails.email,
+            from: fromEmail,
+            subject: `Order Confirmation - ${orderDetails.orderId}`,
+            text: `
+Thank you for your order, ${orderDetails.customerName}!
+
+Order ID: ${orderDetails.orderId}
+Table Number: ${orderDetails.tableNumber}
+Order Time: ${orderDetails.timestamp}
+
+Items:
+${orderDetails.items.map(item => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
+
+Total: ₹${orderDetails.total.toFixed(2)}
+
+Your order is being prepared!
+
+- ${restaurantName}
+            `,
+            html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #ff6b35;">✅ Order Confirmed!</h2>
+    <p>Thank you for your order, <strong>${orderDetails.customerName}</strong>!</p>
+    
+    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
+        <p><strong>Table:</strong> ${orderDetails.tableNumber}</p>
+        <p><strong>Time:</strong> ${orderDetails.timestamp}</p>
+    </div>
+    
+    <h3>Your Items:</h3>
+    ${orderDetails.items.map(item => `
+        <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
+            <strong>${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}
+        </div>
+    `).join('')}
+    
+    <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px;">
+        <h3 style="margin: 0; color: #2e7d32;">Total: ₹${orderDetails.total.toFixed(2)}</h3>
+    </div>
+    
+    <p style="margin-top: 20px; color: #666;">Your order is being prepared!</p>
+    <p style="color: #999; font-size: 12px;">- ${restaurantName}</p>
+</div>
+            `
+        };
+        
+        await sgMail.send(customerMsg);
+        console.log(`✅ SendGrid: Order confirmation sent to customer: ${orderDetails.email}`);
+        
+        // Send to owner if configured
+        if (process.env.OWNER_EMAIL) {
+            const ownerMsg = {
+                to: process.env.OWNER_EMAIL,
+                from: fromEmail,
+                subject: `🔔 New Order - Table ${orderDetails.tableNumber} - ${orderDetails.orderId}`,
+                text: `
+NEW ORDER RECEIVED!
+
+Customer: ${orderDetails.customerName}
+Mobile: ${orderDetails.mobile}
+Email: ${orderDetails.email}
+Table: ${orderDetails.tableNumber}
+Order ID: ${orderDetails.orderId}
+Time: ${orderDetails.timestamp}
+
+Items:
+${orderDetails.items.map(item => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
+
+TOTAL: ₹${orderDetails.total.toFixed(2)}
+
+Please prepare this order!
+                `,
+                html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2e7d32;">🔔 New Order Received!</h2>
+    
+    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Customer Info:</h3>
+        <p><strong>Name:</strong> ${orderDetails.customerName}</p>
+        <p><strong>Mobile:</strong> ${orderDetails.mobile}</p>
+        <p><strong>Email:</strong> ${orderDetails.email}</p>
+    </div>
+    
+    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
+        <p><strong>Table:</strong> <span style="font-size: 20px; color: #ff6b35;">${orderDetails.tableNumber}</span></p>
+        <p><strong>Time:</strong> ${orderDetails.timestamp}</p>
+    </div>
+    
+    <h3>Ordered Items:</h3>
+    ${orderDetails.items.map(item => `
+        <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
+            <strong style="font-size: 16px;">${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}
+        </div>
+    `).join('')}
+    
+    <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px;">
+        <h2 style="margin: 0; color: #2e7d32;">TOTAL: ₹${orderDetails.total.toFixed(2)}</h2>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 15px; background: #ffebee; border-radius: 8px;">
+        <p style="margin: 0; color: #c62828;"><strong>⚡ Action Required: Prepare this order for Table ${orderDetails.tableNumber}</strong></p>
+    </div>
+</div>
+                `
+            };
+            
+            await sgMail.send(ownerMsg);
+            console.log(`✅ SendGrid: Order notification sent to owner: ${process.env.OWNER_EMAIL}`);
+        }
+        
+        return { success: true };
+        
+    } catch (error) {
+        console.error('❌ SendGrid error:', error.message);
+        if (error.response) {
+            console.error('SendGrid response:', error.response.body);
+        }
         return { success: false, error: error.message };
     }
 }
