@@ -124,16 +124,16 @@ app.post('/api/orders', async (req, res) => {
             }
         }
 
-        // Also save to local file as backup
+        // Generate order ID (no local storage)
         const order = {
             id: `ORD-${Date.now()}`,
             ...orderData,
-            items: items, // Keep original format for local storage
+            items: items,
             total: total,
             status: 'pending'
         };
+        // Store in memory only (for 24 hours tracking)
         orders.push(order);
-        saveOrdersToFile();
 
         // Send response immediately to customer
         res.json({ 
@@ -170,11 +170,12 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// Get All Orders (for restaurant owner)
+// Get All Orders (for restaurant owner) - In-memory only
 app.get('/api/orders', (req, res) => {
     res.json({
         success: true,
-        data: orders.reverse() // Most recent first
+        data: orders.slice().reverse(), // Most recent first (don't mutate original)
+        message: 'Orders stored in memory only. Check Google Sheets for permanent records.'
     });
 });
 
@@ -322,38 +323,34 @@ app.patch('/api/orders/:orderId', (req, res) => {
     }
 
     order.status = status;
-    saveOrdersToFile();
+    // No file save - memory only
 
     res.json({ success: true, data: order });
 });
 
-// Save orders to file
-function saveOrdersToFile() {
-    const ordersDir = path.join(__dirname, 'data');
-    const ordersFile = path.join(ordersDir, 'orders.json');
+// Orders are stored in memory only (no file persistence)
+// Old orders are automatically cleaned up after 24 hours
+function cleanupOldOrders() {
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // 24 hours ago
     
-    try {
-        if (!fs.existsSync(ordersDir)) {
-            fs.mkdirSync(ordersDir, { recursive: true });
+    const initialCount = orders.length;
+    // Filter out orders older than 24 hours
+    const recentOrders = orders.filter(order => {
+        try {
+            const orderTime = parseOrderTimestamp(order.timestamp);
+            return orderTime >= cutoffTime;
+        } catch (error) {
+            return true; // Keep if can't parse
         }
-        fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2));
-    } catch (error) {
-        console.error('Error saving orders to file:', error);
-    }
-}
-
-// Load orders from file on startup
-function loadOrdersFromFile() {
-    const ordersFile = path.join(__dirname, 'data', 'orders.json');
+    });
     
-    try {
-        if (fs.existsSync(ordersFile)) {
-            const data = fs.readFileSync(ordersFile, 'utf8');
-            const loadedOrders = JSON.parse(data);
-            orders.push(...loadedOrders);
-        }
-    } catch (error) {
-        console.error('Error loading orders from file:', error);
+    orders.length = 0;
+    orders.push(...recentOrders);
+    
+    const removedCount = initialCount - orders.length;
+    if (removedCount > 0) {
+        console.log(`🧹 Cleaned up ${removedCount} old orders (older than 24 hours)`);
     }
 }
 
@@ -389,11 +386,12 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Automatic cleanup removed - all order data is now kept permanently
-// New sheets are created automatically when current sheet reaches 10,000 rows
+// Automatic cleanup of old orders (runs every hour)
+setInterval(cleanupOldOrders, 60 * 60 * 1000); // Every 1 hour
 
 // Start server
-loadOrdersFromFile();
+console.log('📝 Orders stored in memory only (24-hour retention)');
+console.log('📊 Permanent storage: Google Sheets');
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running on http://localhost:${PORT}`);
