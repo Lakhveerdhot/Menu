@@ -152,26 +152,18 @@ Edit `frontend/styles.css`:
 
 ## 📦 Deployment
 
-### Backend Deployment (Railway/Render/Heroku)
+**Complete deployment guides available:**
 
-1. Push code to GitHub
-2. Connect to Railway/Render/Heroku
-3. Set environment variables:
-   - `USE_GOOGLE_SHEETS=false` (or true if using sheets)
-   - `PORT=5000`
-   - `RESTAURANT_NAME=Your Restaurant`
-   - `MENU_SHEET_URL=...` (if using Google Sheets)
-4. Deploy!
+- **Quick Start:** See `DEPLOYMENT_GUIDE.md` for overview
+- **Backend (Render):** See `DEPLOY_RENDER.md` for detailed steps
+- **Frontend (Vercel):** See `DEPLOY_VERCEL.md` for detailed steps
 
-### Frontend Deployment (Netlify/Vercel)
-
-1. Update `frontend/script.js` line 2 with your backend URL:
-   ```javascript
-   const API_BASE_URL = 'https://your-backend-url.com';
-   ```
-2. Deploy frontend folder to Netlify/Vercel
-3. Get your frontend URL
-4. Generate QR code with this URL
+**Quick Summary:**
+1. Deploy backend to Render (free tier available)
+2. Update `frontend/config.js` with backend URL
+3. Deploy frontend to Vercel (free tier available)
+4. Generate QR code with your frontend URL
+5. Print and place on tables
 
 ## 🔧 Troubleshooting
 
@@ -199,7 +191,7 @@ Edit `frontend/styles.css`:
 
 - **Backend README:** `backend/README.md`
 - **Frontend README:** `frontend/README.md`
-- **Google Sheets Setup:** `GOOGLE_SHEETS_MENU1_SETUP.md` (detailed guide for menu1 sheet)
+- **Deployment Guides:** `DEPLOYMENT_GUIDE.md`, `DEPLOY_RENDER.md`, `DEPLOY_VERCEL.md`
 
 ## 💡 Tips
 

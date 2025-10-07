@@ -15,3 +15,11 @@ Thumbs.db
 
 # Data files (orders)
 backend/data/orders.json
+
+# Test files
+**/test-*.js
+**/diagnose-*.js
+
+# Build files
+dist/
+build/
