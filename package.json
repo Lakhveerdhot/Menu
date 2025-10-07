@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Restaurant QR Menu Ordering System",
   "scripts": {
-    "start": "node start-servers.js",
-    "backend": "cd backend && npm start",
+    "start": "start.cmd",
+    "backend": "cd backend && node server.js",
     "frontend": "cd frontend && npx http-server -p 8080 -c-1",
-    "install-all": "cd backend && npm install"
+    "dev": "cd backend && node server.js"
   },
   "keywords": ["restaurant", "menu", "qr-code"],
   "author": "",
