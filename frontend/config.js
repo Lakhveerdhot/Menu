@@ -1,5 +1,5 @@
 // API Configuration
 // This file will be automatically updated during deployment
-window.API_CONFIG = {
+window.ENV = {
     BASE_URL: 'https://menu-backend-f0zz.onrender.com'
 };
