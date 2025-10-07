@@ -196,6 +196,120 @@ app.get('/api/orders/:orderId', (req, res) => {
     });
 });
 
+// Verify and Get Order by Mobile or Order ID (Secure endpoint)
+app.post('/api/orders/verify', (req, res) => {
+    try {
+        const { mobile, orderId } = req.body;
+        
+        if (!mobile && !orderId) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Please provide either mobile number or order ID' 
+            });
+        }
+
+        let matchedOrders = [];
+        const now = new Date();
+        const recentTimeLimit = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // Last 24 hours
+
+        // Search by mobile or order ID
+        if (mobile) {
+            matchedOrders = orders.filter(o => {
+                const orderTime = parseOrderTimestamp(o.timestamp);
+                return o.mobile === mobile && orderTime >= recentTimeLimit;
+            });
+        } else if (orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                const orderTime = parseOrderTimestamp(order.timestamp);
+                if (orderTime >= recentTimeLimit) {
+                    matchedOrders = [order];
+                }
+            }
+        }
+
+        if (matchedOrders.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'No recent orders found. Orders are only available for 24 hours.' 
+            });
+        }
+
+        // Sort by most recent first
+        matchedOrders.sort((a, b) => {
+            const timeA = parseOrderTimestamp(a.timestamp);
+            const timeB = parseOrderTimestamp(b.timestamp);
+            return timeB - timeA;
+        });
+
+        // Add status and estimated time to each order
+        const ordersWithStatus = matchedOrders.map(order => {
+            const orderTime = parseOrderTimestamp(order.timestamp);
+            const minutesElapsed = Math.floor((now - orderTime) / (1000 * 60));
+            const preparationTime = 20; // 20 minutes preparation time
+            
+            let status, statusText, estimatedTime;
+            
+            if (minutesElapsed < 5) {
+                status = 'received';
+                statusText = 'Order Received';
+                estimatedTime = `${preparationTime - minutesElapsed} minutes`;
+            } else if (minutesElapsed < 10) {
+                status = 'preparing';
+                statusText = 'Preparing Your Food';
+                estimatedTime = `${preparationTime - minutesElapsed} minutes`;
+            } else if (minutesElapsed < preparationTime) {
+                status = 'cooking';
+                statusText = 'Almost Ready';
+                estimatedTime = `${preparationTime - minutesElapsed} minutes`;
+            } else {
+                status = 'ready';
+                statusText = 'Ready to Serve';
+                estimatedTime = 'Now';
+            }
+
+            return {
+                ...order,
+                orderStatus: status,
+                statusText: statusText,
+                estimatedTime: estimatedTime,
+                minutesElapsed: minutesElapsed,
+                preparationTime: preparationTime
+            };
+        });
+
+        res.json({ 
+            success: true, 
+            data: ordersWithStatus,
+            count: ordersWithStatus.length
+        });
+    } catch (error) {
+        console.error('❌ Error verifying order:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to verify order' 
+        });
+    }
+});
+
+// Helper function to parse order timestamp
+function parseOrderTimestamp(timestamp) {
+    try {
+        // Handle Indian format: "DD/MM/YYYY, HH:MM:SS AM/PM"
+        const parts = timestamp.split(', ');
+        if (parts.length === 2) {
+            const [datePart, timePart] = parts;
+            const [day, month, year] = datePart.split('/');
+            const dateStr = `${year}-${month}-${day} ${timePart}`;
+            return new Date(dateStr);
+        }
+        return new Date(timestamp);
+    } catch (error) {
+        console.error('Error parsing timestamp:', error);
+        return new Date();
+    }
+}
+
 // Update Order Status
 app.patch('/api/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
