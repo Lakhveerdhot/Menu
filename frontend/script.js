@@ -1,5 +1,5 @@
 // API Base URL - Loaded from config.js
-const API_BASE_URL = window.API_CONFIG ? window.API_CONFIG.BASE_URL : 'http://localhost:5000';
+const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
 
 // Global state
 let cart = [];
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Load restaurant info
 async function loadRestaurantInfo() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/restaurant-info`);
+        const response = await fetch(`${API_BASE_URL}?path=restaurant-info`);
         const data = await response.json();
         if (data.success) {
             document.getElementById('restaurantName').textContent = data.data.name;
@@ -59,7 +59,7 @@ async function loadRestaurantInfo() {
 // Load menu from API
 async function loadMenu() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/menu`);
+        const response = await fetch(`${API_BASE_URL}?path=menu`);
         const data = await response.json();
         
         if (data.success) {
@@ -289,12 +289,15 @@ async function placeOrder(event) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
         
-        const response = await fetch(`${API_BASE_URL}/api/orders`, {
+        const response = await fetch(API_BASE_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(orderData),
+            body: JSON.stringify({
+                action: 'place-order',
+                ...orderData
+            }),
             signal: controller.signal
         });
         

@@ -7,11 +7,10 @@
     
     const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztv1jO6g-7sfpM-7chRWu3_QvKdhI_p5MR8CYaAy17jCuPllTlgHCsxMt-cQjLXDbt/exec';
     
-    window.API_BASE_URL = {
-        BASE_URL: GOOGLE_APPS_SCRIPT_URL
-    };
+    // Set as direct string for consistency
+    window.API_BASE_URL = GOOGLE_APPS_SCRIPT_URL;
     
-    console.log('🔧 API Config (Google Apps Script):', window.API_BASE_URL.BASE_URL);
+    console.log('🔧 API Config (Google Apps Script):', window.API_BASE_URL);
     
     // Helper function to make API calls to Google Apps Script
     window.apiCall = async function(endpoint, method = 'GET', data = null) {
