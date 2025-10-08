@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Order - Restaurant</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .view-order-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .order-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .order-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .search-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .search-input-group input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid var(--light-color);
+            border-radius: 8px;
+            font-size: 1.1em;
+        }
+
+        .search-input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            background: var(--secondary-color);
+        }
+
+        .order-details-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .order-details-section.active {
+            display: block;
+        }
+
+        .order-info-card {
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .order-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .order-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .order-info-label {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .items-section {
+            margin: 30px 0;
+        }
+
+        .items-section h3 {
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: var(--light-color);
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 5px;
+        }
+
+        .item-quantity {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.1em;
+        }
+
+        .total-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 3px solid var(--primary-color);
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+
+        .status-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .status-text {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .estimated-time {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .status-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .status-progress-bar {
+            height: 100%;
+            background: white;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .orders-list-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .order-card {
+            background: var(--light-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .order-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .order-card.selected {
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .order-card-id {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .order-card-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-received {
+            background: #3498db;
+            color: white;
+        }
+
+        .status-preparing {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-cooking {
+            background: #e67e22;
+            color: white;
+        }
+
+        .status-ready {
+            background: #27ae60;
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-add-items {
+            flex: 1;
+            padding: 18px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-add-items:hover {
+            background: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-back {
+            padding: 18px 40px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: #7f8c8d;
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .view-order-container {
+                padding: 10px;
+                margin: 20px auto;
+            }
+
+            .search-input-group {
+                flex-direction: column;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .item-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="view-order-container">
+        <div class="order-header">
+            <h1>🍽️ View Your Order</h1>
+            <p>Track your order and add more items</p>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section" id="searchSection">
+            <h2>Track Your Order</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                Enter your mobile number or order ID to view recent orders
+            </p>
+            
+            <div style="max-width: 500px; margin: 0 auto;">
+                <!-- Mobile Number Input -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-color);">
+                        Mobile Number
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="mobileInput" 
+                        placeholder="Enter your mobile number"
+                        maxlength="10"
+                        style="width: 100%; padding: 15px; border: 2px solid var(--light-color); border-radius: 8px; font-size: 1.1em;"
+                        onkeypress="if(event.key === 'Enter') searchOrder()"
+                    >
+                </div>
+                
+                <div style="text-align: center; margin: 15px 0; color: #999; font-weight: 600;">OR</div>
+                
+                <!-- Order ID Input -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-color);">
+                        Order ID
+                    </label>
+                    <input 
+                        type="text" 
+                        id="orderIdInput" 
+                        placeholder="e.g., ORD-1234567890"
+                        style="width: 100%; padding: 15px; border: 2px solid var(--light-color); border-radius: 8px; font-size: 1.1em;"
+                        onkeypress="if(event.key === 'Enter') searchOrder()"
+                    >
+                </div>
+                
+                <button class="search-btn" onclick="searchOrder()" style="width: 100%;">
+                    🔍 Track Order
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <p>Loading order details...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error-message" id="errorMessage">
+            <p>Order not found. Please check your details and try again.</p>
+        </div>
+
+        <!-- Orders List Section (Multiple Orders) -->
+        <div class="orders-list-section" id="ordersListSection" style="display: none;">
+            <h2>Your Recent Orders</h2>
+            <p style="color: #666; margin-bottom: 20px;">Click on an order to view details</p>
+            <div id="ordersList"></div>
+        </div>
+
+        <!-- Order Details Section -->
+        <div class="order-details-section" id="orderDetailsSection">
+            <!-- Status Section -->
+            <div class="status-section" id="statusSection">
+                <div class="status-icon" id="statusIcon">🍳</div>
+                <div class="status-text" id="statusText">Preparing Your Order</div>
+                <div class="estimated-time" id="estimatedTime">Estimated time: 15 minutes</div>
+                <div class="status-progress">
+                    <div class="status-progress-bar" id="statusProgressBar" style="width: 50%"></div>
+                </div>
+            </div>
+
+            <h2>Order Details</h2>
+            
+            <div class="order-info-card">
+                <div class="order-info-row">
+                    <span class="order-info-label">Order ID:</span>
+                    <span id="displayOrderId"></span>
+                </div>
+                <div class="order-info-row">
+                    <span class="order-info-label">Table Number:</span>
+                    <span id="displayTableNumber"></span>
+                </div>
+                <div class="order-info-row">
+                    <span class="order-info-label">Customer Name:</span>
+                    <span id="displayCustomerName"></span>
+                </div>
+                <div class="order-info-row">
+                    <span class="order-info-label">Order Time:</span>
+                    <span id="displayOrderTime"></span>
+                </div>
+            </div>
+
+            <div class="items-section">
+                <h3>Ordered Items</h3>
+                <div id="itemsList"></div>
+                
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Total Amount:</span>
+                        <span>₹<span id="displayTotal"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-add-items" onclick="addMoreItems()">
+                    ➕ Add More Items to This Order
+                </button>
+                <button class="btn-back" onclick="goToMenu()">
+                    🏠 Back to Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const API_BASE_URL = window.API_BASE_URL.BASE_URL;
+        let currentOrder = null;
+        let allOrders = [];
+
+        // Check if Order ID is in URL
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('orderId');
+            
+            if (orderId) {
+                document.getElementById('orderIdInput').value = orderId;
+                searchOrder();
+            }
+        };
+
+        // Search for order
+        async function searchOrder() {
+            const mobile = document.getElementById('mobileInput').value.trim();
+            const orderId = document.getElementById('orderIdInput').value.trim();
+            
+            if (!mobile && !orderId) {
+                alert('Please enter either mobile number or order ID');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('errorMessage').classList.remove('active');
+            document.getElementById('orderDetailsSection').classList.remove('active');
+            document.getElementById('ordersListSection').style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/orders/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mobile, orderId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    allOrders = data.data;
+                    
+                    if (data.count === 1) {
+                        // Single order - show directly
+                        currentOrder = data.data[0];
+                        displayOrderDetails(data.data[0]);
+                    } else {
+                        // Multiple orders - show list
+                        displayOrdersList(data.data);
+                    }
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                console.error('Error fetching order:', error);
+                showError('Failed to fetch order. Please try again.');
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        // Display list of orders
+        function displayOrdersList(orders) {
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('ordersListSection').style.display = 'block';
+            
+            const ordersHtml = orders.map(order => {
+                const statusClass = `status-${order.orderStatus}`;
+                return `
+                    <div class="order-card" onclick="selectOrder('${order.id}')">
+                        <div class="order-card-header">
+                            <span class="order-card-id">${order.id}</span>
+                            <span class="order-card-status ${statusClass}">${order.statusText}</span>
+                        </div>
+                        <div style="color: #666;">
+                            <div>Table: ${order.tableNumber} | Time: ${order.timestamp}</div>
+                            <div style="margin-top: 5px; font-weight: 600; color: var(--primary-color);">
+                                Total: ₹${order.total.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('ordersList').innerHTML = ordersHtml;
+        }
+
+        // Select an order from the list
+        function selectOrder(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (order) {
+                currentOrder = order;
+                displayOrderDetails(order);
+            }
+        }
+
+        // Display order details
+        function displayOrderDetails(order) {
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('ordersListSection').style.display = 'none';
+            document.getElementById('orderDetailsSection').classList.add('active');
+            
+            // Update status section
+            updateStatusDisplay(order);
+            
+            // Fill in order info
+            document.getElementById('displayOrderId').textContent = order.id;
+            document.getElementById('displayTableNumber').textContent = order.tableNumber;
+            document.getElementById('displayCustomerName').textContent = order.customerName || 'N/A';
+            document.getElementById('displayOrderTime').textContent = order.timestamp;
+            
+            // Display items
+            const itemsHtml = order.items.map(item => `
+                <div class="item-row">
+                    <div class="item-details">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-quantity">Quantity: ${item.quantity}</div>
+                    </div>
+                    <div class="item-price">₹${(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('itemsList').innerHTML = itemsHtml;
+            document.getElementById('displayTotal').textContent = order.total.toFixed(2);
+        }
+
+        // Update status display
+        function updateStatusDisplay(order) {
+            const statusSection = document.getElementById('statusSection');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const estimatedTime = document.getElementById('estimatedTime');
+            const progressBar = document.getElementById('statusProgressBar');
+            
+            // Set icon based on status
+            const icons = {
+                'received': '📝',
+                'preparing': '👨‍🍳',
+                'cooking': '🍳',
+                'ready': '✅'
+            };
+            
+            // Set background color based on status
+            const colors = {
+                'received': 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                'preparing': 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
+                'cooking': 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)',
+                'ready': 'linear-gradient(135deg, #27ae60 0%, #229954 100%)'
+            };
+            
+            // Calculate progress percentage
+            const progress = Math.min(100, (order.minutesElapsed / order.preparationTime) * 100);
+            
+            statusIcon.textContent = icons[order.orderStatus] || '🍽️';
+            statusText.textContent = order.statusText;
+            statusSection.style.background = colors[order.orderStatus];
+            progressBar.style.width = progress + '%';
+            
+            if (order.orderStatus === 'ready') {
+                estimatedTime.textContent = '🎉 Your food is ready! Please collect from the counter.';
+            } else {
+                estimatedTime.textContent = `⏱️ Estimated time: ${order.estimatedTime}`;
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            if (message) {
+                errorElement.querySelector('p').textContent = message;
+            }
+            errorElement.classList.add('active');
+        }
+
+        // Add more items to this order
+        function addMoreItems() {
+            if (!currentOrder) return;
+            
+            // Store order data in localStorage
+            localStorage.setItem('addToOrder', JSON.stringify(currentOrder));
+            
+            // Redirect to main menu page
+            window.location.href = 'index.html?addMore=true';
+        }
+
+        // Go back to menu
+        function goToMenu() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
