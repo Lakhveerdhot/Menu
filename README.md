@@ -1,146 +1,151 @@
-# Restaurant QR Menu Ordering System
+# 🍽️ Restaurant QR Menu & Ordering System
 
-A complete QR code-based restaurant menu ordering system with **optional** Google Sheets integration for easy menu management and order tracking.
+A modern, **pure HTML/CSS/JavaScript** restaurant ordering system with QR code menu scanning, real-time order management, and Google Sheets integration. **No backend server needed!**
 
-## 🎯 Features
+## ✨ Features
 
-✅ **Customer Features:**
-- Scan QR code to view menu
-- Browse menu items by category
-- Add items to cart with quantity control
-- View live bill calculation
-- Place orders with table number and optional contact details
-- Responsive design for mobile devices
+- 📱 **QR Code Menu Access** - Customers scan and browse menu instantly
+- 🛒 **Shopping Cart** - Add items, customize quantities
+- 📝 **Order Placement** - Simple checkout with customer details
+- 📊 **Google Sheets Integration** - All orders saved automatically
+- 📧 **Email Notifications** - Instant confirmations to customers and owner
+- 🔄 **Auto Sheet Rotation** - Creates new sheet at 10,000 orders
+- 📱 **Mobile Responsive** - Works perfectly on all devices
+- 🎨 **Modern UI** - Beautiful, intuitive interface
+- ⚡ **Serverless** - No Node.js or Express needed
+- 💰 **100% Free** - GitHub Pages + Google Apps Script
 
-✅ **Owner Features:**
-- **Google Sheets "menu1" integration** (just paste spreadsheet URL)
-- Update menu by editing Google Sheets - changes appear instantly
-- Track customer orders in JSON file
-- No coding needed to update menu
+## 🚀 Tech Stack
+
+### Frontend
+- **HTML5, CSS3, JavaScript** (Pure vanilla - no frameworks!)
+- Responsive design
+- No build process needed
+- Deploy anywhere (GitHub Pages, Vercel, Netlify)
+
+### Backend
+- **Google Apps Script** (Serverless, free forever)
+- Runs on Google's infrastructure
+- Auto-scales, never goes down
+- Built-in email service
+
+### Database
+- **Google Sheets** (Free, unlimited storage)
+- Real-time updates
+- Easy to view and export
+- Auto-rotation at 10,000 rows
 
 ## 📁 Project Structure
 
 ```
-menu/
-├── backend/              # Backend API server
-│   ├── data/
-│   │   └── orders.json  # Stored orders
-│   ├── utils/
-│   │   └── sheetsHelper.js  # Google Sheets integration
-│   ├── server.js        # Main server file
-│   ├── package.json
-│   ├── .env.example
-│   └── README.md
+restaurant-menu-system/
+├── frontend/                          # Pure HTML/CSS/JS (Deploy this!)
+│   ├── index.html                    # Main menu page
+│   ├── view-order.html               # Order tracking page
+│   ├── styles.css                    # All styles
+│   ├── script.js                     # Frontend logic
+│   ├── config.js                     # API configuration ⚙️
+│   └── vercel.json                   # Vercel config
 │
-├── frontend/            # Customer-facing website
-│   ├── index.html
-│   ├── styles.css
-│   ├── script.js
-│   └── README.md
-│
-└── README.md           # This file
+├── GOOGLE_APPS_SCRIPT_BACKEND.js     # Copy to Google Apps Script
+├── DEPLOY_GITHUB_PAGES.md            # Full deployment guide
+├── QUICK_START.md                    # 10-minute setup
+└── README.md                         # This file
 ```
 
-## 🚀 Quick Start
+## 🛠️ Quick Setup (10 Minutes)
 
-### 1. Install Backend Dependencies
+### **Step 1: Setup Google Sheets** (2 min)
 
-```powershell
-cd backend
-npm install
+1. Create new spreadsheet: "Restaurant Menu"
+2. Create sheet `menu1`:
+   ```
+   ID | Name | Description | Price | Category | Image
+   1  | Paneer Tikka | Grilled cottage cheese | 250 | Starters |
+   ```
+3. Create sheet `Orders`:
+   ```
+   Timestamp | Order ID | Table | Customer Name | Mobile | Email | Items | Total
+   ```
+4. Share → Anyone with link → Viewer
+
+### **Step 2: Deploy Backend** (3 min)
+
+1. In Google Sheet: **Extensions → Apps Script**
+2. Copy code from `GOOGLE_APPS_SCRIPT_BACKEND.js`
+3. Update CONFIG (restaurant name, owner email)
+4. **Deploy → New deployment → Web app**
+   - Execute as: Me
+   - Access: Anyone
+5. Copy Web App URL
+
+### **Step 3: Update Frontend** (1 min)
+
+Edit `frontend/config.js`:
+```javascript
+const GOOGLE_APPS_SCRIPT_URL = 'YOUR_WEB_APP_URL_HERE';
 ```
 
-### 2. Configure Backend
+### **Step 4: Push to GitHub** (2 min)
 
-```powershell
-copy backend\.env.example backend\.env
+```bash
+git init
+git add .
+git commit -m "Restaurant menu system"
+git remote add origin https://github.com/YOUR_USERNAME/restaurant-menu.git
+git push -u origin main
 ```
 
-Edit `backend/.env`:
-```env
-MENU_SHEET_URL=your_google_sheet_url_here
-PORT=5000
-RESTAURANT_NAME=My Restaurant
-RESTAURANT_TAGLINE=Delicious Food, Great Service
+### **Step 5: Deploy to GitHub Pages** (2 min)
+
+1. GitHub repo → **Settings → Pages**
+2. Source: `main` branch
+3. Folder: `/frontend`
+4. Save
+
+**Done! Live at:** `https://YOUR_USERNAME.github.io/restaurant-menu/`
+
+## 📖 Full Documentation
+
+- **Quick Start**: See `QUICK_START.md`
+- **Detailed Guide**: See `DEPLOY_GITHUB_PAGES.md`
+- **Backend Code**: See `GOOGLE_APPS_SCRIPT_BACKEND.js`
+
+## 🌐 Deployment Options
+
+| Platform | Cost | Setup Time | Best For |
+|----------|------|------------|----------|
+| **GitHub Pages** | Free | 2 min | Recommended |
+| **Vercel** | Free | 1 min | Auto-deploy |
+| **Netlify** | Free | 1 min | Drag & drop |
+| **Any Static Host** | Free | Varies | Flexibility |
+
+## 📊 How It Works
+
+```
+Customer → QR Code → Website (GitHub Pages)
+                          ↓
+                    Browse Menu (from Google Sheets)
+                          ↓
+                    Place Order
+                          ↓
+              Google Apps Script Backend
+                          ↓
+        ┌─────────────────┼─────────────────┐
+        ↓                 ↓                 ↓
+  Save to Sheet    Send Email (Customer)  Send Email (Owner)
 ```
 
-### 3. Start Everything
+## 💰 Cost Breakdown
 
-From the root folder:
-```powershell
-npm start
-```
-
-This will automatically:
-- ✅ Start backend server on `http://localhost:5000`
-- ✅ Start frontend server on `http://localhost:8080`
-- ✅ Open website in your browser
-
-### 4. Test the System
-
-1. Open `http://localhost:8080` in browser
-2. Browse menu items
-3. Add items to cart
-4. Place a test order
-5. Check `backend/data/orders.json` for saved orders
-
-## 📝 Configuration
-
-### Google Sheets "menu1" Setup
-
-**Super Simple - Just 4 Steps!**
-
-#### Step 1: Create Menu Sheet Named "menu1"
-1. Create a new Google Sheet
-2. **Rename the first sheet to "menu1"** (click on "Sheet1" at bottom and rename)
-3. Add headers in Row 1: **ID | Name | Description | Price | Category**
-4. Add your menu items starting from Row 2
-
-**Example:**
-```
-| ID | Name           | Description                    | Price | Category    |
-|----|----------------|--------------------------------|-------|-------------|
-| 1  | Butter Chicken | Creamy tomato-based curry      | 350   | Main Course |
-| 2  | Paneer Tikka   | Grilled cottage cheese         | 250   | Starters    |
-```
-
-#### Step 2: Make Sheet Public
-1. Click **"Share"** → **"Anyone with the link"** → **"Viewer"** → **"Copy link"**
-
-#### Step 3: Update Backend
-Edit `backend/.env`:
-```env
-MENU_SHEET_URL=paste_your_copied_url_here
-```
-
-#### Step 4: Restart Backend
-```powershell
-npm run dev
-```
-
-✅ **Done!** Edit your "menu1" sheet anytime - changes appear instantly on the website!
-
-## 🎨 Customization
-
-### Change Restaurant Name
-Edit `backend/.env`:
-```env
-RESTAURANT_NAME=Your Restaurant Name
-RESTAURANT_TAGLINE=Your Tagline Here
-```
-
-### Edit Menu Items
-Simply edit your Google Sheets "menu1" - changes appear immediately when customers refresh the page!
-
-### Change Colors
-Edit `frontend/styles.css`:
-```css
-:root {
-    --primary-color: #ff6b35;    /* Main color */
-    --secondary-color: #f7931e;  /* Accent color */
-    --success-color: #27ae60;    /* Success messages */
-}
-```
+| Service | Cost |
+|---------|------|
+| GitHub Pages | **Free** |
+| Google Apps Script | **Free** |
+| Google Sheets | **Free** |
+| Gmail (100 emails/day) | **Free** |
+| Domain (optional) | $10/year |
+| **Total** | **$0/month** 🎉 |
 
 ## 📱 Generate QR Code
 

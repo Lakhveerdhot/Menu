@@ -1,20 +1,28 @@
-# Dependencies
+# Dependencies (backend - optional, not needed for deployment)
+backend/node_modules/
 node_modules/
-package-lock.json
 
-# Environment variables
-.env
+# Environment variables (backend - not needed for pure HTML/CSS/JS)
 backend/.env
+.env
 
 # Logs
 *.log
+npm-debug.log*
 
 # OS files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
-# Data files (orders)
-backend/data/orders.json
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Data files (not needed - using Google Sheets)
+backend/data/
 
 # Test files
 **/test-*.js
@@ -23,3 +31,11 @@ backend/data/orders.json
 # Build files
 dist/
 build/
+
+# Vercel
+.vercel
+frontend/.vercel
+
+# Temporary files
+*.tmp
+*.temp
