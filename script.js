@@ -294,6 +294,7 @@ async function placeOrder(event) {
     placeOrderBtn.textContent = '⏳ Placing Order...';
     
     try {
+        console.log('Placing order:', orderData);
         // Add timeout for better UX
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
@@ -311,8 +312,10 @@ async function placeOrder(event) {
         });
         
         clearTimeout(timeoutId);
+        console.log('Order response status:', response.status);
         
         const data = await response.json();
+        console.log('Order response data:', data);
         
         if (data.success) {
             // Show success modal briefly
