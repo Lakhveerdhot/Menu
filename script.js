@@ -155,8 +155,13 @@ function renderMenu() {
 
 // Add item to cart
 function addToCart(itemId) {
-    const item = menuItems.find(i => i.id === itemId);
-    if (!item) return;
+    console.log('Adding to cart:', itemId);
+    // Convert to string for comparison (IDs from Google Sheets might be strings)
+    const item = menuItems.find(i => String(i.id) === String(itemId));
+    if (!item) {
+        console.error('Item not found:', itemId);
+        return;
+    }
     
     const existingItem = cart.find(i => i.id === itemId);
     
