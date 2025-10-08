@@ -7,7 +7,7 @@
     
     const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-T0cU0YCsZORxug5UNAZMYFIbHAPsYBpC4Q8Pf5EOvTqcA5yLOswYoM4qYq8uheJr/exec';
     
-    // Set as direct string for consistency
+    // Set as direct string for consistency (for index.html)
     window.API_BASE_URL = GOOGLE_APPS_SCRIPT_URL;
     
     console.log('🔧 API Config (Google Apps Script):', window.API_BASE_URL);

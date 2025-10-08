@@ -53,6 +53,15 @@ restaurant-menu-system/
 └── README.md                         # This file
 ```
 
+## 🚀 Quick Start - Deploy in 10 Minutes!
+
+**📖 Complete Guides Available:**
+- **Hindi Guide:** `DEPLOYMENT_GUIDE_GITHUB.md` - Step-by-step Hindi me
+- **Quick Commands:** `QUICK_DEPLOY_COMMANDS.md` - Copy-paste commands
+- **Checklist:** `DEPLOYMENT_CHECKLIST.md` - Complete verification checklist
+
+---
+
 ## 🛠️ Quick Setup (10 Minutes)
 
 ### **Step 1: Setup Google Sheets** (2 min)
