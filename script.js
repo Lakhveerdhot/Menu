@@ -59,11 +59,14 @@ async function loadRestaurantInfo() {
 // Load menu from API
 async function loadMenu() {
     try {
+        console.log('Fetching menu from:', `${API_BASE_URL}?path=menu`);
         const response = await fetch(`${API_BASE_URL}?path=menu`);
         const data = await response.json();
+        console.log('Menu response:', data);
         
         if (data.success) {
             menuItems = data.data;
+            console.log('Menu items loaded:', menuItems.length);
             
             // Hide loading spinner
             document.getElementById('menuLoading').style.display = 'none';
@@ -72,6 +75,7 @@ async function loadMenu() {
             renderCategories();
             renderMenu();
         } else {
+            console.error('Menu load failed:', data.error);
             document.getElementById('menuLoading').style.display = 'none';
             document.getElementById('menuGrid').innerHTML = '<p class="error">Failed to load menu. Please refresh the page.</p>';
         }
