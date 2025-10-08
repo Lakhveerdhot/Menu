@@ -20,6 +20,17 @@ const CONFIG = {
 // ============================================
 // MAIN HANDLER - Entry point for all requests
 // ============================================
+
+// Handle CORS preflight requests
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
 function doGet(e) {
   const path = e.parameter.path || '';
   
