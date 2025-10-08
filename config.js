@@ -5,7 +5,7 @@
     // After deploying the script, you'll get a URL like:
     // https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
     
-    const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxR3gsbs8sBIA-XQJncH6Jluuna4z7OFZtdpLJixKPYI35bUx35irD1Hf9GiS-gncL/exec';
+    const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxq94pI1e3lLjP60aKWhPLNgrr5B1TZLDkffpTyaCaJM2ZpppvUUpw_uY2Emety0kPG/exec';
     
     // Set as direct string for consistency (for index.html)
     window.API_BASE_URL = GOOGLE_APPS_SCRIPT_URL;
