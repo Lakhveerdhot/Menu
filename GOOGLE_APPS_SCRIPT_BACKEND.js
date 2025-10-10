@@ -227,37 +227,28 @@ function placeOrder(data) {
       mobile: data.mobile,
       email: data.email || 'N/A',
       items: itemsString,
-      total: `₹${data.total.toFixed(2)}`
+      // store numeric total so clients can format as needed
+      total: Number(data.total)
     });
     
     // Send emails (non-blocking)
     try {
-      if (data.email && data.email !== 'N/A' && CONFIG.CUSTOMER_EMAIL_ENABLED) {
-        sendCustomerEmail({
-          orderId: orderId,
-          timestamp: timestamp,
-          tableNumber: data.tableNumber,
-          customerName: data.customerName,
-          email: data.email,
-          items: data.items,
-          total: data.total
-        });
-      }
-      
-      if (CONFIG.OWNER_EMAIL) {
-        sendOwnerEmail({
-          orderId: orderId,
-          timestamp: timestamp,
-          tableNumber: data.tableNumber,
-          customerName: data.customerName,
-          mobile: data.mobile,
-          email: data.email || 'N/A',
-          items: data.items,
-          total: data.total
-        });
-      }
+      // Queue emails by appending to EmailQueue sheet. Processing the queue
+      // can be done by a separate time-driven trigger which calls processEmailQueue().
+      queueEmail({
+        orderId: orderId,
+        timestamp: timestamp,
+        tableNumber: data.tableNumber,
+        customerName: data.customerName,
+        mobile: data.mobile,
+        email: data.email || 'N/A',
+        items: data.items,
+        total: data.total,
+        notifyCustomer: !!(data.email && data.email !== 'N/A' && CONFIG.CUSTOMER_EMAIL_ENABLED),
+        notifyOwner: !!CONFIG.OWNER_EMAIL
+      });
     } catch (emailError) {
-      Logger.log('Email error (non-critical): ' + emailError.toString());
+      Logger.log('Email queue error (non-critical): ' + emailError.toString());
     }
     
     return {
@@ -410,6 +401,7 @@ function verifyOrder(data) {
           const formattedTimestamp = Utilities.formatDate(orderTimestamp, 'Asia/Kolkata', 'dd/MM/yyyy, hh:mm:ss a');
           const isoTimestamp = orderTimestamp instanceof Date ? orderTimestamp.toISOString() : new Date(orderTimestamp).toISOString();
 
+          const numericTotal = parseFloat(String(row[7]).replace(/[^0-9.-]+/g, '')) || 0;
           matchedOrders.push({
             orderId: row[1],
             timestamp: formattedTimestamp,
@@ -419,7 +411,8 @@ function verifyOrder(data) {
             mobile: row[4],
             email: row[5],
             items: parsedItems,
-            total: row[7],
+            total: numericTotal,
+            totalFormatted: `₹${numericTotal.toFixed(2)}`,
             orderTime: orderTimestamp
           });
         }
@@ -688,6 +681,51 @@ function parseItemsFromSheet(raw) {
   } catch (error) {
     Logger.log('parseItemsFromSheet error: ' + error.toString());
     return [];
+  }
+}
+
+// Queue email by writing to EmailQueue sheet; a time-driven trigger can call processEmailQueue
+function queueEmail(emailPayload) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('EmailQueue');
+    if (!sheet) {
+      sheet = ss.insertSheet('EmailQueue');
+      sheet.appendRow(['Timestamp', 'OrderId', 'To', 'Type', 'Payload', 'Status']);
+    }
+    sheet.appendRow([new Date(), emailPayload.orderId, emailPayload.email || 'N/A', JSON.stringify({ notifyCustomer: emailPayload.notifyCustomer, notifyOwner: emailPayload.notifyOwner }), JSON.stringify(emailPayload), 'queued']);
+  } catch (e) {
+    Logger.log('queueEmail error: ' + e.toString());
+  }
+}
+
+// Process queued emails (call from a time-driven trigger)
+function processEmailQueue() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('EmailQueue');
+    if (!sheet) return;
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const status = row[5];
+      if (status !== 'queued') continue;
+      try {
+        const payload = JSON.parse(row[4]);
+        if (payload.notifyCustomer && payload.email && payload.email !== 'N/A') {
+          sendCustomerEmail(payload);
+        }
+        if (payload.notifyOwner && CONFIG.OWNER_EMAIL) {
+          sendOwnerEmail(payload);
+        }
+        sheet.getRange(i+1, 6).setValue('sent');
+      } catch (inner) {
+        Logger.log('Email send failed for row ' + (i+1) + ': ' + inner.toString());
+        sheet.getRange(i+1, 6).setValue('failed: ' + inner.toString());
+      }
+    }
+  } catch (e) {
+    Logger.log('processEmailQueue error: ' + e.toString());
   }
 }
 function jsonResponse(data, statusCode = 200) {
