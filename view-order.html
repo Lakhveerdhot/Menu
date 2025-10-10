@@ -511,16 +511,15 @@
             document.getElementById('ordersListSection').style.display = 'none';
 
             try {
+                // Send as form-encoded to reduce CORS preflight requests
+                const params = new URLSearchParams();
+                params.append('action', 'verify-order');
+                params.append('mobile', mobile);
+                params.append('orderId', orderId);
+
                 const response = await fetch(API_BASE_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        action: 'verify-order',
-                        mobile, 
-                        orderId 
-                    })
+                    body: params
                 });
                 
                 const data = await response.json();

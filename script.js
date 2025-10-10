@@ -299,15 +299,17 @@ async function placeOrder(event) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
         
+        // Use form-encoded body to reduce CORS preflight likelihood.
+        // Many Google Apps Script backends accept form data. Sending
+        // as application/x-www-form-urlencoded avoids the JSON content-type
+        // which would trigger a preflight OPTIONS request.
+        const params = new URLSearchParams();
+        params.append('action', 'place-order');
+        params.append('payload', JSON.stringify(orderData));
+
         const response = await fetch(API_BASE_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                action: 'place-order',
-                ...orderData
-            }),
+            body: params,
             signal: controller.signal
         });
         
