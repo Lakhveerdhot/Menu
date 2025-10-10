@@ -320,27 +320,32 @@ function verifyOrder(data) {
     const now = new Date();
     const cutoffTime = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // 24 hours ago
     
+    // Capture request criteria and normalize
+    const reqMobile = data.mobile ? String(data.mobile).trim() : '';
+    const reqOrderId = data.orderId ? String(data.orderId).trim() : '';
+
     // Search through all order sheets
     for (let sheet of sheets) {
       const sheetName = sheet.getName();
       if (!sheetName.startsWith(CONFIG.ORDERS_SHEET_NAME)) continue;
-      
-      const data = sheet.getDataRange().getValues();
-      
+
+      const rows = sheet.getDataRange().getValues();
+
       // Skip header row
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
         const orderTimestamp = parseTimestamp(row[0]);
-        const orderMobile = row[4];
-        const orderIdInSheet = row[1];
-        
+        const orderMobile = row[4] ? String(row[4]).trim() : '';
+        const orderIdInSheet = row[1] ? String(row[1]).trim() : '';
+
         // Check if order is within 24 hours
         if (orderTimestamp < cutoffTime) continue;
-        
+
         // Match by mobile or order ID
-        if ((data.mobile && orderMobile === data.mobile) || 
-            (data.orderId && orderIdInSheet === data.orderId)) {
-          
+        const mobileMatch = reqMobile && orderMobile === reqMobile;
+        const idMatch = reqOrderId && orderIdInSheet === reqOrderId;
+
+        if (mobileMatch || idMatch) {
           matchedOrders.push({
             orderId: row[1],
             timestamp: row[0],
