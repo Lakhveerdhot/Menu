@@ -406,9 +406,14 @@ function verifyOrder(data) {
           const rawItems = row[6];
           const parsedItems = parseItemsFromSheet(rawItems);
 
+          // Format timestamp for client (India time) and include ISO for reference
+          const formattedTimestamp = Utilities.formatDate(orderTimestamp, 'Asia/Kolkata', 'dd/MM/yyyy, hh:mm:ss a');
+          const isoTimestamp = orderTimestamp instanceof Date ? orderTimestamp.toISOString() : new Date(orderTimestamp).toISOString();
+
           matchedOrders.push({
             orderId: row[1],
-            timestamp: row[0],
+            timestamp: formattedTimestamp,
+            timestampISO: isoTimestamp,
             tableNumber: row[2],
             customerName: row[3],
             mobile: row[4],
