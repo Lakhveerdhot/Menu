@@ -22,14 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const order = JSON.parse(orderData);
                 
                 // Add order items to cart
-                order.items.forEach(item => {
-                    const existingItem = cart.find(i => i.id === item.id);
-                    if (existingItem) {
-                        existingItem.quantity += item.quantity;
-                    } else {
-                        cart.push({ ...item });
-                    }
-                });
+                    order.items.forEach(item => {
+                        const idStr = String(item.id);
+                        const existingItem = cart.find(i => String(i.id) === idStr);
+                        if (existingItem) {
+                            existingItem.quantity += item.quantity;
+                        } else {
+                            cart.push({ ...item, id: idStr });
+                        }
+                    });
                 
                 updateCart();
                 localStorage.removeItem('addToOrder');
@@ -188,12 +189,13 @@ function addToCart(itemId) {
         return;
     }
     
-    const existingItem = cart.find(i => i.id === itemId);
-    
+    // Normalize id comparisons as strings to avoid type mismatch duplicates
+    const existingItem = cart.find(i => String(i.id) === String(itemId));
+
     if (existingItem) {
         existingItem.quantity++;
     } else {
-        cart.push({ ...item, quantity: 1 });
+        cart.push({ ...item, id: String(item.id), quantity: 1 });
     }
     
     updateCart();
@@ -202,7 +204,7 @@ function addToCart(itemId) {
 
 // Update cart quantity
 function updateQuantity(itemId, change) {
-    const item = cart.find(i => i.id === itemId);
+    const item = cart.find(i => String(i.id) === String(itemId));
     if (!item) return;
     
     item.quantity += change;
@@ -238,9 +240,9 @@ function updateCart() {
                     <p class="cart-item-price">₹${item.price.toFixed(2)} × ${item.quantity}</p>
                 </div>
                 <div class="quantity-controls">
-                    <button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
+                        <button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
                     <span>${item.quantity}</span>
-                    <button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+                        <button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
                 </div>
             </div>
         `).join('');
