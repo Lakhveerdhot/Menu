@@ -60,6 +60,21 @@ async function loadRestaurantInfo() {
 async function loadMenu() {
     try {
         console.log('Fetching menu from:', `${API_BASE_URL}?path=menu`);
+        // If we have cached menu in localStorage, render it first for fast UX
+        const cached = localStorage.getItem('menu_cache_v1');
+        if (cached) {
+            try {
+                const cachedMenu = JSON.parse(cached);
+                menuItems = cachedMenu;
+                renderCategories();
+                renderMenu();
+                document.getElementById('menuLoading').style.display = 'none';
+                document.getElementById('categoryFilter').style.display = 'flex';
+            } catch (e) {
+                console.warn('Failed to parse cached menu:', e);
+            }
+        }
+
         const response = await fetch(`${API_BASE_URL}?path=menu`);
         const data = await response.json();
         console.log('Menu response:', data);
@@ -71,7 +86,13 @@ async function loadMenu() {
             // Hide loading spinner
             document.getElementById('menuLoading').style.display = 'none';
             document.getElementById('categoryFilter').style.display = 'flex';
-            
+            // Save to local cache for fast subsequent loads
+            try {
+                localStorage.setItem('menu_cache_v1', JSON.stringify(menuItems));
+            } catch (e) {
+                console.warn('Failed to write menu cache:', e);
+            }
+
             renderCategories();
             renderMenu();
         } else {

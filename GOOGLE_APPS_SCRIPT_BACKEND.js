@@ -105,26 +105,50 @@ function getRestaurantInfo() {
 // ============================================
 function getMenu() {
   try {
+    // Use CacheService to reduce repeated sheet reads and speed up responses
+    try {
+      const cache = CacheService.getScriptCache();
+      const cached = cache.get('menu_cache_v1');
+      if (cached) {
+        const cachedData = JSON.parse(cached);
+        return {
+          success: true,
+          data: cachedData,
+          source: 'cache',
+          count: cachedData.length
+        };
+      }
+    } catch (cacheErr) {
+      Logger.log('Cache read error: ' + cacheErr.toString());
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
-    
+
     if (!sheet) {
       return {
         success: false,
         error: `Menu sheet "${CONFIG.MENU_SHEET_NAME}" not found`
       };
     }
-    
-    const data = sheet.getDataRange().getValues();
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    // If only header exists, return empty list
+    if (lastRow <= 1) {
+      return { success: true, data: [], source: 'google-sheets', count: 0 };
+    }
+
+    const data = sheet.getRange(1, 1, lastRow, Math.max(lastCol, 6)).getValues();
     const menuItems = [];
-    
+
     // Skip header row (index 0)
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      
+
       // Skip empty rows
       if (!row[0] && !row[1]) continue;
-      
+
       menuItems.push({
         id: row[0] || `item-${i}`,
         name: row[1] || '',
@@ -133,6 +157,14 @@ function getMenu() {
         category: row[4] || 'Other',
         image: row[5] || ''
       });
+    }
+
+    // Cache the parsed menu for 5 minutes to speed up repeated calls
+    try {
+      const cache = CacheService.getScriptCache();
+      cache.put('menu_cache_v1', JSON.stringify(menuItems), 300); // 300 seconds
+    } catch (cacheErr) {
+      Logger.log('Cache write error: ' + cacheErr.toString());
     }
     
     return {
