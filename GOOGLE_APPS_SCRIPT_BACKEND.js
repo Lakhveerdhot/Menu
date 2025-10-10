@@ -691,9 +691,10 @@ function queueEmail(emailPayload) {
     let sheet = ss.getSheetByName('EmailQueue');
     if (!sheet) {
       sheet = ss.insertSheet('EmailQueue');
-      sheet.appendRow(['Timestamp', 'OrderId', 'To', 'Type', 'Payload', 'Status']);
+      // Columns: Timestamp, OrderId, To, Type, Payload, Status, Attempts, LastError
+      sheet.appendRow(['Timestamp', 'OrderId', 'To', 'Type', 'Payload', 'Status', 'Attempts', 'LastError']);
     }
-    sheet.appendRow([new Date(), emailPayload.orderId, emailPayload.email || 'N/A', JSON.stringify({ notifyCustomer: emailPayload.notifyCustomer, notifyOwner: emailPayload.notifyOwner }), JSON.stringify(emailPayload), 'queued']);
+    sheet.appendRow([new Date(), emailPayload.orderId, emailPayload.email || 'N/A', JSON.stringify({ notifyCustomer: emailPayload.notifyCustomer, notifyOwner: emailPayload.notifyOwner }), JSON.stringify(emailPayload), 'queued', 0, '']);
   } catch (e) {
     Logger.log('queueEmail error: ' + e.toString());
   }
@@ -706,26 +707,74 @@ function processEmailQueue() {
     const sheet = ss.getSheetByName('EmailQueue');
     if (!sheet) return;
     const data = sheet.getDataRange().getValues();
+    // Process rows: columns index mapping
+    // 0: Timestamp,1:OrderId,2:To,3:Type,4:Payload,5:Status,6:Attempts,7:LastError
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       const status = row[5];
-      if (status !== 'queued') continue;
+      let attempts = Number(row[6]) || 0;
+      const lastError = row[7] || '';
+
+      // Only process queued or retryable (attempts < 3)
+      if (status === 'sent' || (status === 'failed' && attempts >= 3)) continue;
+
       try {
         const payload = JSON.parse(row[4]);
+        // Attempt send
         if (payload.notifyCustomer && payload.email && payload.email !== 'N/A') {
           sendCustomerEmail(payload);
         }
         if (payload.notifyOwner && CONFIG.OWNER_EMAIL) {
           sendOwnerEmail(payload);
         }
+
+        // Mark sent
         sheet.getRange(i+1, 6).setValue('sent');
+        sheet.getRange(i+1, 7).setValue(attempts + 1);
+        sheet.getRange(i+1, 8).setValue('');
       } catch (inner) {
-        Logger.log('Email send failed for row ' + (i+1) + ': ' + inner.toString());
-        sheet.getRange(i+1, 6).setValue('failed: ' + inner.toString());
+        attempts = attempts + 1;
+        const errMsg = inner && inner.toString ? inner.toString().substring(0, 200) : String(inner);
+        Logger.log('Email send failed for row ' + (i+1) + ': ' + errMsg);
+        if (attempts >= 3) {
+          sheet.getRange(i+1, 6).setValue('failed');
+          sheet.getRange(i+1, 7).setValue(attempts);
+          sheet.getRange(i+1, 8).setValue(errMsg);
+        } else {
+          // keep as queued to retry later
+          sheet.getRange(i+1, 6).setValue('queued');
+          sheet.getRange(i+1, 7).setValue(attempts);
+          sheet.getRange(i+1, 8).setValue(errMsg);
+        }
       }
     }
   } catch (e) {
     Logger.log('processEmailQueue error: ' + e.toString());
+  }
+}
+
+// Reset failed entries back to queued (useful to retry after fixing issue)
+function retryFailedEmails() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('EmailQueue');
+    if (!sheet) return { success: false, error: 'No EmailQueue sheet' };
+    const data = sheet.getDataRange().getValues();
+    let resetCount = 0;
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const status = row[5];
+      if (status && String(status).toLowerCase().startsWith('failed')) {
+        sheet.getRange(i+1, 6).setValue('queued');
+        sheet.getRange(i+1, 7).setValue(0);
+        sheet.getRange(i+1, 8).setValue('');
+        resetCount++;
+      }
+    }
+    return { success: true, reset: resetCount };
+  } catch (e) {
+    Logger.log('retryFailedEmails error: ' + e.toString());
+    return { success: false, error: e.toString() };
   }
 }
 function jsonResponse(data, statusCode = 200) {
