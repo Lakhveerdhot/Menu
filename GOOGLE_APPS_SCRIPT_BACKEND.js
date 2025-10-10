@@ -323,6 +323,14 @@ function verifyOrder(data) {
     // Capture request criteria and normalize
     const reqMobile = data.mobile ? String(data.mobile).trim() : '';
     const reqOrderId = data.orderId ? String(data.orderId).trim() : '';
+    const debug = data.debug === true || data.debug === 'true';
+
+    // If debug requested, prepare a small preview of sheet rows to return
+    const diagnostics = {
+      reqMobile: reqMobile,
+      reqOrderId: reqOrderId,
+      sheetsChecked: []
+    };
 
     // Search through all order sheets
     for (let sheet of sheets) {
@@ -330,6 +338,22 @@ function verifyOrder(data) {
       if (!sheetName.startsWith(CONFIG.ORDERS_SHEET_NAME)) continue;
 
       const rows = sheet.getDataRange().getValues();
+      // Capture a preview for diagnostics
+      if (debug) {
+        const preview = [];
+        for (let i = 1; i < Math.min(rows.length, 11); i++) {
+          const r = rows[i];
+          preview.push({
+            rowIndex: i + 1,
+            timestampRaw: r[0],
+            parsedTimestamp: parseTimestamp(r[0]),
+            orderId: r[1],
+            mobile: r[4],
+            items: r[6]
+          });
+        }
+        diagnostics.sheetsChecked.push({ sheetName: sheetName, preview: preview, totalRows: rows.length });
+      }
 
       // Skip header row
       for (let i = 1; i < rows.length; i++) {
@@ -362,6 +386,14 @@ function verifyOrder(data) {
     }
     
     if (matchedOrders.length === 0) {
+      if (debug) {
+        return {
+          success: false,
+          error: 'No recent orders found. Orders are only available for 24 hours.',
+          diagnostics: diagnostics
+        };
+      }
+
       return {
         success: false,
         error: 'No recent orders found. Orders are only available for 24 hours.'
