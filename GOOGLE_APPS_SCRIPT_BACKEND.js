@@ -105,23 +105,6 @@ function getRestaurantInfo() {
 // ============================================
 function getMenu() {
   try {
-    // Use CacheService to reduce repeated sheet reads and speed up responses
-    try {
-      const cache = CacheService.getScriptCache();
-      const cached = cache.get('menu_cache_v1');
-      if (cached) {
-        const cachedData = JSON.parse(cached);
-        return {
-          success: true,
-          data: cachedData,
-          source: 'cache',
-          count: cachedData.length
-        };
-      }
-    } catch (cacheErr) {
-      Logger.log('Cache read error: ' + cacheErr.toString());
-    }
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
 
@@ -134,6 +117,25 @@ function getMenu() {
 
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
+    // Use a cache key that includes sheet size so cache invalidates when rows/cols change
+    const cacheKey = `menu_cache_v1_${lastRow}_${lastCol}`;
+
+    // Attempt to read from cache using the dynamic key
+    try {
+      const cache = CacheService.getScriptCache();
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        const cachedData = JSON.parse(cached);
+        return {
+          success: true,
+          data: cachedData,
+          source: 'cache',
+          count: cachedData.length
+        };
+      }
+    } catch (cacheErr) {
+      Logger.log('Cache read error: ' + cacheErr.toString());
+    }
     // If only header exists, return empty list
     if (lastRow <= 1) {
       return { success: true, data: [], source: 'google-sheets', count: 0 };
@@ -162,7 +164,7 @@ function getMenu() {
     // Cache the parsed menu for 5 minutes to speed up repeated calls
     try {
       const cache = CacheService.getScriptCache();
-      cache.put('menu_cache_v1', JSON.stringify(menuItems), 300); // 300 seconds
+      cache.put(cacheKey, JSON.stringify(menuItems), 300); // 300 seconds
     } catch (cacheErr) {
       Logger.log('Cache write error: ' + cacheErr.toString());
     }
