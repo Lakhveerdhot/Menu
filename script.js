@@ -4,6 +4,38 @@ const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
 // Global state
 let cart = [];
 let selectedCategory = 'All';
+// Cart matching strategy: 'id' | 'name' | 'idOrName'
+// Change this value if you want matching behavior different (e.g., match by name)
+const CART_MATCH_STRATEGY = 'idOrName';
+
+function sameItem(a, b) {
+    if (!a || !b) return false;
+    const idA = a.id ? String(a.id).trim() : '';
+    const idB = b.id ? String(b.id).trim() : '';
+    const nameA = a.name ? String(a.name).trim().toLowerCase() : '';
+    const nameB = b.name ? String(b.name).trim().toLowerCase() : '';
+
+    if (CART_MATCH_STRATEGY === 'id') return idA !== '' && idA === idB;
+    if (CART_MATCH_STRATEGY === 'name') return nameA !== '' && nameA === nameB;
+    // idOrName
+    if (idA !== '' && idA === idB) return true;
+    if (nameA !== '' && nameA === nameB) return true;
+    return false;
+}
+
+function mergeCartDuplicates() {
+    const merged = [];
+    for (const item of cart) {
+        const existing = merged.find(m => sameItem(m, item));
+        if (existing) {
+            existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
+        } else {
+            // clone to avoid references
+            merged.push({ ...item, id: item.id ? String(item.id) : item.id, name: item.name ? String(item.name) : item.name });
+        }
+    }
+    cart = merged;
+}
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,16 +55,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Add order items to cart
                     order.items.forEach(item => {
-                        const idStr = String(item.id);
-                        const existingItem = cart.find(i => String(i.id) === idStr);
+                        // Find existing by strategy
+                        const existingItem = cart.find(i => sameItem(i, item));
                         if (existingItem) {
                             existingItem.quantity += item.quantity;
                         } else {
-                            cart.push({ ...item, id: idStr });
+                            cart.push({ ...item, id: String(item.id) });
                         }
                     });
                 
                 updateCart();
+                    mergeCartDuplicates();
                 localStorage.removeItem('addToOrder');
                 
                 showNotification('Previous order items added! Add more items and place order.');
@@ -190,13 +223,14 @@ function addToCart(itemId) {
     }
     
     // Normalize id comparisons as strings to avoid type mismatch duplicates
-    const existingItem = cart.find(i => String(i.id) === String(itemId));
+    const existingItem = cart.find(i => sameItem(i, item) || String(i.id) === String(itemId));
 
     if (existingItem) {
         existingItem.quantity++;
     } else {
         cart.push({ ...item, id: String(item.id), quantity: 1 });
     }
+    mergeCartDuplicates();
     
     updateCart();
     showNotification('Item added to cart!');
