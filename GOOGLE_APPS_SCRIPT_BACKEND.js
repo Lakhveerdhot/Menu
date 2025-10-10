@@ -402,6 +402,10 @@ function verifyOrder(data) {
         const idMatch = reqOrderId && orderIdInSheet === reqOrderId;
 
         if (mobileMatch || idMatch) {
+          // Normalize items: try JSON parse, otherwise parse human-readable string
+          const rawItems = row[6];
+          const parsedItems = parseItemsFromSheet(rawItems);
+
           matchedOrders.push({
             orderId: row[1],
             timestamp: row[0],
@@ -409,7 +413,7 @@ function verifyOrder(data) {
             customerName: row[3],
             mobile: row[4],
             email: row[5],
-            items: row[6],
+            items: parsedItems,
             total: row[7],
             orderTime: orderTimestamp
           });
@@ -644,6 +648,43 @@ function sendOwnerEmail(orderDetails) {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+function parseItemsFromSheet(raw) {
+  try {
+    if (!raw) return [];
+    // If already an array in stringified JSON
+    if (typeof raw === 'string') {
+      raw = raw.trim();
+      // Try JSON
+      try {
+        const maybe = JSON.parse(raw);
+        if (Array.isArray(maybe)) return maybe.map(i => ({ name: i.name || i, quantity: i.quantity || 1, price: i.price || 0 }));
+      } catch (e) {
+        // not JSON, continue
+      }
+
+      // Try to parse pattern like: "Pizza x2 (₹398), Coke x1 (₹50)"
+      const parts = raw.split(',');
+      const items = parts.map(p => {
+        const m = p.trim().match(/^(.*?)x(\d+)\s*\(₹?([0-9.]+)\)/);
+        if (m) {
+          return { name: m[1].trim(), quantity: parseInt(m[2], 10), price: parseFloat(m[3]) };
+        }
+        // fallback: name only
+        return { name: p.trim(), quantity: 1, price: 0 };
+      });
+
+      return items;
+    }
+
+    // If raw is array already
+    if (Array.isArray(raw)) return raw;
+    return [];
+  } catch (error) {
+    Logger.log('parseItemsFromSheet error: ' + error.toString());
+    return [];
+  }
+}
 function jsonResponse(data, statusCode = 200) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
