@@ -38,8 +38,20 @@ function mergeCartDuplicates() {
     cart = merged;
 }
 
+// Mobile detection function
+function isMobile() {
+    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    // Check device type
+    if (!isMobile()) {
+        document.querySelector('.container').style.display = 'none';
+        document.getElementById('desktop-message').style.display = 'flex';
+        return; // Stop further initialization
+    }
+
     // Initialize
     loadRestaurantInfo();
     loadMenu();
@@ -47,12 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if coming from "Add More Items" - integrated directly
     const urlParams = new URLSearchParams(window.location.search);
     const addMore = urlParams.get('addMore');
-    
+
     if (addMore === 'true') {
         const orderData = localStorage.getItem('addToOrder');
         if (orderData) {
             const order = JSON.parse(orderData);
-            
+
             // Add order items to cart
             order.items.forEach(item => {
                 // Find existing by strategy
@@ -63,12 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     cart.push({ ...item, id: String(item.id) });
                 }
             });
-            
+
             mergeCartDuplicates();
             updateCart();
             renderMenu(); // Refresh menu to show quantities
             localStorage.removeItem('addToOrder');
-            
+
             showNotification('Previous order items added! Add more items and place order.');
             toggleCart();
         }
