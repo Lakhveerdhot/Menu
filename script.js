@@ -3,6 +3,7 @@ const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
 
 // Global state
 let cart = [];
+let menuItems = []; // Add global declaration for menuItems
 let selectedCategory = 'All';
 // Cart matching strategy: 'id' | 'name' | 'idOrName'
 // Change this value if you want matching behavior different (e.g., match by name)
@@ -43,36 +44,35 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRestaurantInfo();
     loadMenu();
 
-    // Check if coming from "Add More Items"
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const addMore = urlParams.get('addMore');
-        
-        if (addMore === 'true') {
-            const orderData = localStorage.getItem('addToOrder');
-            if (orderData) {
-                const order = JSON.parse(orderData);
-                
-                // Add order items to cart
-                    order.items.forEach(item => {
-                        // Find existing by strategy
-                        const existingItem = cart.find(i => sameItem(i, item));
-                        if (existingItem) {
-                            existingItem.quantity += item.quantity;
-                        } else {
-                            cart.push({ ...item, id: String(item.id) });
-                        }
-                    });
-                
-                updateCart();
-                    mergeCartDuplicates();
-                localStorage.removeItem('addToOrder');
-                
-                showNotification('Previous order items added! Add more items and place order.');
-                toggleCart();
-            }
+    // Check if coming from "Add More Items" - integrated directly
+    const urlParams = new URLSearchParams(window.location.search);
+    const addMore = urlParams.get('addMore');
+    
+    if (addMore === 'true') {
+        const orderData = localStorage.getItem('addToOrder');
+        if (orderData) {
+            const order = JSON.parse(orderData);
+            
+            // Add order items to cart
+            order.items.forEach(item => {
+                // Find existing by strategy
+                const existingItem = cart.find(i => sameItem(i, item));
+                if (existingItem) {
+                    existingItem.quantity += item.quantity;
+                } else {
+                    cart.push({ ...item, id: String(item.id) });
+                }
+            });
+            
+            mergeCartDuplicates();
+            updateCart();
+            renderMenu(); // Refresh menu to show quantities
+            localStorage.removeItem('addToOrder');
+            
+            showNotification('Previous order items added! Add more items and place order.');
+            toggleCart();
         }
-    };
+    }
 });
 
 // Load restaurant info
@@ -159,6 +159,11 @@ function filterByCategory(category) {
     renderMenu();
 }
 
+function getCurrentQuantity(item) {
+    const existingItem = cart.find(i => sameItem(i, item));
+    return existingItem ? existingItem.quantity : 0;
+}
+
 // Render menu items
 function renderMenu() {
     const filteredItems = selectedCategory === 'All' 
@@ -171,6 +176,20 @@ function renderMenu() {
     }
     
     const menuHtml = filteredItems.map(item => {
+        const currentQty = getCurrentQuantity(item);
+        const actionHtml = `
+            <div class="order-bar">
+                ${currentQty === 0 
+                    ? `<button class="add-btn" onclick="addToCart('${item.id}')">Add to Cart</button>`
+                    : `
+                        <button class="qty-btn minus" onclick="updateQuantity('${item.id}', -1)">−</button>
+                        <span class="qty-display">${currentQty}</span>
+                        <button class="qty-btn plus" onclick="addToCart('${item.id}')">+</button>
+                    `
+                }
+            </div>
+        `;
+
         // Only show image if owner has added image URL in Google Sheet
         if (item.image && item.image.trim() !== '') {
             return `
@@ -185,9 +204,7 @@ function renderMenu() {
                     </div>
                     <p class="item-description">${item.description}</p>
                     <span class="item-category">${item.category}</span>
-                    <button class="add-to-cart" onclick="addToCart('${item.id}')">
-                        Add to Cart
-                    </button>
+                    ${actionHtml}
                 </div>
             </div>
         `} else {
@@ -201,9 +218,7 @@ function renderMenu() {
                     </div>
                     <p class="item-description">${item.description}</p>
                     <span class="item-category">${item.category}</span>
-                    <button class="add-to-cart" onclick="addToCart('${item.id}')">
-                        Add to Cart
-                    </button>
+                    ${actionHtml}
                 </div>
             </div>
         `}
@@ -216,10 +231,16 @@ function renderMenu() {
 function addToCart(itemId) {
     console.log('Adding to cart:', itemId);
     // Convert to string for comparison (IDs from Google Sheets might be strings)
-    const item = menuItems.find(i => String(i.id) === String(itemId));
+    let item = menuItems.find(i => String(i.id) === String(itemId));
     if (!item) {
-        console.error('Item not found:', itemId);
-        return;
+        // Fallback: try find by name if id not found (in case onclick uses name or id missing)
+        item = menuItems.find(i => i.name && i.name.toLowerCase() === itemId.toLowerCase());
+        if (item) {
+            console.warn('Item found by name fallback:', item.name);
+        } else {
+            console.error('Item not found by id or name:', itemId);
+            return;
+        }
     }
     
     // Normalize id comparisons as strings to avoid type mismatch duplicates
@@ -227,27 +248,44 @@ function addToCart(itemId) {
 
     if (existingItem) {
         existingItem.quantity++;
+        console.log('Incremented quantity for:', existingItem.name, 'New qty:', existingItem.quantity);
     } else {
-        cart.push({ ...item, id: String(item.id), quantity: 1 });
+        const newItem = { ...item, id: String(item.id || item.name), quantity: 1 };
+        cart.push(newItem);
+        console.log('Added new item to cart:', newItem.name);
     }
     mergeCartDuplicates();
     
     updateCart();
+    renderMenu(); // Refresh menu to show updated quantity controls
     showNotification('Item added to cart!');
 }
 
 // Update cart quantity
 function updateQuantity(itemId, change) {
-    const item = cart.find(i => String(i.id) === String(itemId));
-    if (!item) return;
-    
-    item.quantity += change;
-    
-    if (item.quantity <= 0) {
-        cart = cart.filter(i => i.id !== itemId);
+    // Find by id first
+    let item = cart.find(i => String(i.id) === String(itemId));
+    if (!item) {
+        // Fallback: try find by name in cart
+        item = cart.find(i => i.name && i.name.toLowerCase() === itemId.toLowerCase());
+        if (!item) {
+            console.error('Cart item not found for update:', itemId);
+            return;
+        }
+        console.warn('Cart item found by name fallback for update:', item.name);
     }
     
+    item.quantity += change;
+    console.log('Updated quantity for:', item.name, 'Change:', change, 'New qty:', item.quantity);
+    
+    if (item.quantity <= 0) {
+        cart = cart.filter(i => String(i.id) !== String(itemId));
+        console.log('Removed item from cart:', item.name);
+    }
+    
+    mergeCartDuplicates();
     updateCart();
+    renderMenu(); // Refresh menu to show updated quantity controls
 }
 
 // Update cart display
@@ -442,6 +480,250 @@ function showNotification(message) {
     setTimeout(() => {
         notification.remove();
     }, 2000);
+}
+
+// View Order Functions
+function showViewOrder() {
+    const modal = document.getElementById('viewOrderModal');
+    const overlay = document.getElementById('overlay');
+
+    // Reset modal state
+    document.getElementById('searchSection').style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errorMessage').classList.remove('active');
+    document.getElementById('ordersListSection').style.display = 'none';
+    document.getElementById('orderDetailsSection').classList.remove('active');
+
+    // Clear inputs
+    document.getElementById('mobileInput').value = '';
+    document.getElementById('orderIdInput').value = '';
+
+    modal.classList.add('active');
+    overlay.classList.add('active');
+}
+
+function closeViewOrder() {
+    document.getElementById('viewOrderModal').classList.remove('active');
+    document.getElementById('overlay').classList.remove('active');
+}
+
+async function searchOrder() {
+    const mobile = document.getElementById('mobileInput').value.trim();
+    const orderId = document.getElementById('orderIdInput').value.trim();
+
+    if (!mobile && !orderId) {
+        alert('Please enter either mobile number or order ID');
+        return;
+    }
+
+    // Show loading
+    document.getElementById('searchSection').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('errorMessage').classList.remove('active');
+
+    try {
+        let queryParams = '';
+        if (mobile) queryParams = `mobile=${encodeURIComponent(mobile)}`;
+        if (orderId) queryParams = `orderId=${encodeURIComponent(orderId)}`;
+
+        const response = await fetch(`${API_BASE_URL}?path=orders&${queryParams}`);
+        const data = await response.json();
+
+        if (data.success && data.data && data.data.length > 0) {
+            const orders = data.data;
+
+            if (orders.length === 1) {
+                // Single order - show details directly
+                displayOrderDetails(orders[0]);
+            } else {
+                // Multiple orders - show list
+                displayOrdersList(orders);
+            }
+        } else {
+            // No orders found
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorMessage').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Error searching orders:', error);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorMessage').classList.add('active');
+    }
+}
+
+function displayOrdersList(orders) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('ordersListSection').style.display = 'block';
+
+    const ordersHtml = orders.map(order => {
+        const statusClass = getStatusClass(order.status);
+        const statusText = getStatusText(order.status);
+
+        return `
+            <div class="order-card" onclick="displayOrderDetails(${JSON.stringify(order).replace(/"/g, '"')})">
+                <div class="order-card-header">
+                    <span class="order-card-id">${order.orderId}</span>
+                    <span class="order-card-status ${statusClass}">${statusText}</span>
+                </div>
+                <div>
+                    <strong>${order.customerName}</strong> • Table ${order.tableNumber}<br>
+                    <small>${new Date(order.timestamp).toLocaleString()}</small><br>
+                    <small>Total: ₹${order.total.toFixed(2)}</small>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('ordersList').innerHTML = ordersHtml;
+}
+
+function displayOrderDetails(order) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('searchSection').style.display = 'none';
+    document.getElementById('ordersListSection').style.display = 'none';
+    document.getElementById('orderDetailsSection').classList.add('active');
+
+    // Update status section
+    updateOrderStatus(order.status);
+
+    // Fill order details
+    document.getElementById('displayOrderId').textContent = order.orderId;
+    document.getElementById('displayTableNumber').textContent = order.tableNumber;
+    document.getElementById('displayCustomerName').textContent = order.customerName;
+    document.getElementById('displayOrderTime').textContent = new Date(order.timestamp).toLocaleString();
+    document.getElementById('displayTotal').textContent = order.total.toFixed(2);
+
+    // Render items
+    const itemsHtml = order.items.map(item => `
+        <div class="item-row">
+            <div class="item-details">
+                <div class="item-name">${item.name}</div>
+                <div class="item-quantity">Quantity: ${item.quantity}</div>
+            </div>
+            <div class="item-price">₹${(item.price * item.quantity).toFixed(2)}</div>
+        </div>
+    `).join('');
+
+    document.getElementById('itemsList').innerHTML = itemsHtml;
+}
+
+function updateOrderStatus(status) {
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const estimatedTime = document.getElementById('estimatedTime');
+    const progressBar = document.getElementById('statusProgressBar');
+
+    let icon = '🍳';
+    let text = 'Preparing Your Order';
+    let time = 'Estimated time: 15 minutes';
+    let progress = '50%';
+
+    switch (status.toLowerCase()) {
+        case 'received':
+            icon = '📋';
+            text = 'Order Received';
+            time = 'Estimated time: 20 minutes';
+            progress = '20%';
+            break;
+        case 'preparing':
+            icon = '🍳';
+            text = 'Preparing Your Order';
+            time = 'Estimated time: 15 minutes';
+            progress = '50%';
+            break;
+        case 'cooking':
+            icon = '🔥';
+            text = 'Cooking Your Order';
+            time = 'Estimated time: 10 minutes';
+            progress = '75%';
+            break;
+        case 'ready':
+            icon = '✅';
+            text = 'Order Ready!';
+            time = 'Please collect your order';
+            progress = '100%';
+            break;
+        case 'completed':
+            icon = '🎉';
+            text = 'Order Completed';
+            time = 'Thank you for dining with us!';
+            progress = '100%';
+            break;
+    }
+
+    statusIcon.textContent = icon;
+    statusText.textContent = text;
+    estimatedTime.textContent = time;
+    progressBar.style.width = progress;
+}
+
+function getStatusClass(status) {
+    switch (status.toLowerCase()) {
+        case 'received': return 'status-received';
+        case 'preparing': return 'status-preparing';
+        case 'cooking': return 'status-cooking';
+        case 'ready': return 'status-ready';
+        case 'completed': return 'status-completed';
+        default: return 'status-received';
+    }
+}
+
+function getStatusText(status) {
+    switch (status.toLowerCase()) {
+        case 'received': return 'Received';
+        case 'preparing': return 'Preparing';
+        case 'cooking': return 'Cooking';
+        case 'ready': return 'Ready';
+        case 'completed': return 'Completed';
+        default: return 'Received';
+    }
+}
+
+function addMoreItems() {
+    const orderId = document.getElementById('displayOrderId').textContent;
+    const customerName = document.getElementById('displayCustomerName').textContent;
+    const tableNumber = document.getElementById('displayTableNumber').textContent;
+
+    // Get current order items
+    const itemsList = document.getElementById('itemsList');
+    const itemRows = itemsList.querySelectorAll('.item-row');
+    const orderItems = [];
+
+    itemRows.forEach(row => {
+        const name = row.querySelector('.item-name').textContent;
+        const quantityText = row.querySelector('.item-quantity').textContent;
+        const quantity = parseInt(quantityText.replace('Quantity: ', ''));
+        const priceText = row.querySelector('.item-price').textContent;
+        const price = parseFloat(priceText.replace('₹', '')) / quantity;
+
+        orderItems.push({
+            name: name,
+            quantity: quantity,
+            price: price
+        });
+    });
+
+    // Store order data for adding more items
+    const orderData = {
+        orderId: orderId,
+        customerName: customerName,
+        tableNumber: tableNumber,
+        items: orderItems
+    };
+
+    localStorage.setItem('addToOrder', JSON.stringify(orderData));
+
+    // Redirect to menu with addMore flag
+    window.location.href = `${window.location.pathname}?addMore=true`;
+}
+
+// Close all modals (updated to include viewOrderModal)
+function closeAll() {
+    document.getElementById('cartSidebar').classList.remove('active');
+    document.getElementById('checkoutModal').classList.remove('active');
+    document.getElementById('successModal').classList.remove('active');
+    document.getElementById('viewOrderModal').classList.remove('active');
+    document.getElementById('overlay').classList.remove('active');
 }
 
 // Add animation keyframes
