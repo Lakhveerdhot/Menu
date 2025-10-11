@@ -9,6 +9,9 @@
     
     // Set as direct string for consistency (for index.html)
     window.API_BASE_URL = GOOGLE_APPS_SCRIPT_URL;
+    // Optional frontend hints - set these to match your Apps Script CONFIG values
+    window.OWNER_EMAIL = 'owner@example.com'; // update to your email if you want owner contact visible
+    window.CUSTOMER_EMAIL_ENABLED = true; // set to false to disable customer confirmation emails from backend
     
     console.log('🔧 API Config (Google Apps Script):', window.API_BASE_URL);
     

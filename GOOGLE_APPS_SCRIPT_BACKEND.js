@@ -17,6 +17,14 @@ const CONFIG = {
   CUSTOMER_EMAIL_ENABLED: true        // Send confirmation emails to customers
 };
 
+// Optional email queue configuration
+// EMAIL_QUEUE_SHEET_NAME: name of the sheet used to queue outbound emails
+// EMAIL_QUEUE_AUTO_CREATE: if true, the backend will create the sheet when missing
+// If false (default), missing queue sheet will NOT be auto-created and emails
+// will be sent immediately instead of being queued.
+CONFIG.EMAIL_QUEUE_SHEET_NAME = 'EmailQueue';
+CONFIG.EMAIL_QUEUE_AUTO_CREATE = false;
+
 // ============================================
 // MAIN HANDLER - Entry point for all requests
 // ============================================
@@ -690,12 +698,32 @@ function parseItemsFromSheet(raw) {
 function queueEmail(emailPayload) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('EmailQueue');
+    const queueName = CONFIG.EMAIL_QUEUE_SHEET_NAME || 'EmailQueue';
+    let sheet = ss.getSheetByName(queueName);
+
+    // If sheet doesn't exist and auto-create is disabled, skip queueing and send immediately
+    if (!sheet && !CONFIG.EMAIL_QUEUE_AUTO_CREATE) {
+      Logger.log('Email queue sheet missing and auto-create disabled. Sending immediately.');
+      try {
+        if (emailPayload.notifyCustomer && emailPayload.email && emailPayload.email !== 'N/A' && CONFIG.CUSTOMER_EMAIL_ENABLED) {
+          sendCustomerEmail(emailPayload);
+        }
+        if (emailPayload.notifyOwner && CONFIG.OWNER_EMAIL) {
+          sendOwnerEmail(emailPayload);
+        }
+      } catch (sendErr) {
+        Logger.log('Immediate email send failed: ' + sendErr.toString());
+      }
+      return;
+    }
+
+    // Create sheet if missing and auto-create is enabled
     if (!sheet) {
-      sheet = ss.insertSheet('EmailQueue');
+      sheet = ss.insertSheet(queueName);
       // Columns: Timestamp, OrderId, To, Type, Payload, Status, Attempts, LastError
       sheet.appendRow(['Timestamp', 'OrderId', 'To', 'Type', 'Payload', 'Status', 'Attempts', 'LastError']);
     }
+
     sheet.appendRow([new Date(), emailPayload.orderId, emailPayload.email || 'N/A', JSON.stringify({ notifyCustomer: emailPayload.notifyCustomer, notifyOwner: emailPayload.notifyOwner }), JSON.stringify(emailPayload), 'queued', 0, '']);
   } catch (e) {
     Logger.log('queueEmail error: ' + e.toString());
@@ -706,8 +734,12 @@ function queueEmail(emailPayload) {
 function processEmailQueue() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('EmailQueue');
-    if (!sheet) return;
+    const queueName = CONFIG.EMAIL_QUEUE_SHEET_NAME || 'EmailQueue';
+    const sheet = ss.getSheetByName(queueName);
+    if (!sheet) {
+      Logger.log('processEmailQueue: no queue sheet named ' + queueName);
+      return;
+    }
     const data = sheet.getDataRange().getValues();
     // Process rows: columns index mapping
     // 0: Timestamp,1:OrderId,2:To,3:Type,4:Payload,5:Status,6:Attempts,7:LastError
@@ -759,8 +791,9 @@ function processEmailQueue() {
 function retryFailedEmails() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('EmailQueue');
-    if (!sheet) return { success: false, error: 'No EmailQueue sheet' };
+    const queueName = CONFIG.EMAIL_QUEUE_SHEET_NAME || 'EmailQueue';
+    const sheet = ss.getSheetByName(queueName);
+    if (!sheet) return { success: false, error: 'No ' + queueName + ' sheet' };
     const data = sheet.getDataRange().getValues();
     let resetCount = 0;
     for (let i = 1; i < data.length; i++) {
