@@ -335,10 +335,10 @@ function toggleCart() {
 // Show checkout modal
 function showCheckout() {
     if (cart.length === 0) return;
-    
+
     const modal = document.getElementById('checkoutModal');
     const overlay = document.getElementById('overlay');
-    
+
     // Render order summary
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const summaryHtml = cart.map(item => `
@@ -347,13 +347,14 @@ function showCheckout() {
             <span>₹${(item.price * item.quantity).toFixed(2)}</span>
         </div>
     `).join('');
-    
+
     document.getElementById('orderSummaryItems').innerHTML = summaryHtml;
     document.getElementById('orderTotal').textContent = total.toFixed(2);
-    
+
     modal.classList.add('active');
     overlay.classList.add('active');
-    
+    document.body.classList.add('modal-open');
+
     // Close cart sidebar
     document.getElementById('cartSidebar').classList.remove('active');
 }
@@ -362,6 +363,7 @@ function showCheckout() {
 function closeCheckout() {
     document.getElementById('checkoutModal').classList.remove('active');
     document.getElementById('overlay').classList.remove('active');
+    document.body.classList.remove('modal-open');
 }
 
 // Place order
@@ -449,6 +451,7 @@ async function placeOrder(event) {
 function closeSuccess() {
     document.getElementById('successModal').classList.remove('active');
     document.getElementById('overlay').classList.remove('active');
+    document.body.classList.remove('modal-open');
 }
 
 // Close all modals
@@ -724,6 +727,7 @@ function closeAll() {
     document.getElementById('successModal').classList.remove('active');
     document.getElementById('viewOrderModal').classList.remove('active');
     document.getElementById('overlay').classList.remove('active');
+    document.body.classList.remove('modal-open');
 }
 
 // Add animation keyframes
