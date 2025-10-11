@@ -13,7 +13,7 @@ const CONFIG = {
   MENU_SHEET_NAME: 'menu1',           // Sheet name for menu items
   ORDERS_SHEET_NAME: 'orders',        // Sheet name for orders
   MAX_ROWS_PER_SHEET: 10000,          // Auto-create new sheet at this limit
-  OWNER_EMAIL: 'owner@example.com',   // Restaurant owner email
+  OWNER_EMAIL: 'lakhveer.eduboss@gmail.com',   // Restaurant owner email
   CUSTOMER_EMAIL_ENABLED: true        // Send confirmation emails to customers
 };
 
