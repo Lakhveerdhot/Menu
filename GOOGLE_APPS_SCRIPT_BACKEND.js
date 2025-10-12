@@ -149,23 +149,70 @@ function getMenu() {
       return { success: true, data: [], source: 'google-sheets', count: 0 };
     }
 
+    // Read the full range (ensure at least 6 columns so existing sheets work)
     const data = sheet.getRange(1, 1, lastRow, Math.max(lastCol, 6)).getValues();
     const menuItems = [];
+
+    // Determine header mapping (case-insensitive)
+    const headerRow = data[0].map(h => (h || '').toString().trim().toLowerCase());
+    const idx = {
+      id: headerRow.indexOf('id') >= 0 ? headerRow.indexOf('id') : 0,
+      name: headerRow.indexOf('name') >= 0 ? headerRow.indexOf('name') : 1,
+      description: headerRow.indexOf('description') >= 0 ? headerRow.indexOf('description') : 2,
+      price: headerRow.indexOf('price') >= 0 ? headerRow.indexOf('price') : 3,
+      category: headerRow.indexOf('category') >= 0 ? headerRow.indexOf('category') : 4,
+      image: headerRow.indexOf('image') >= 0 ? headerRow.indexOf('image') : 5,
+      rating: (headerRow.indexOf('rating') >= 0 ? headerRow.indexOf('rating') : -1),
+      hasOffers: (headerRow.indexOf('hasoffers') >= 0 ? headerRow.indexOf('hasoffers') : (headerRow.indexOf('has_offers') >= 0 ? headerRow.indexOf('has_offers') : -1)),
+      isVeg: (headerRow.indexOf('isveg') >= 0 ? headerRow.indexOf('isveg') : (headerRow.indexOf('is_veg') >= 0 ? headerRow.indexOf('is_veg') : -1))
+    };
 
     // Skip header row (index 0)
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
 
-      // Skip empty rows
-      if (!row[0] && !row[1]) continue;
+      // Skip empty rows (no id and no name)
+      const rawId = row[idx.id];
+      const rawName = row[idx.name];
+      if (!rawId && !rawName) continue;
+
+      const priceRaw = row[idx.price];
+      const priceVal = typeof priceRaw === 'number' ? priceRaw : parseFloat(String(priceRaw || '').replace(/[^0-9.-]+/g, '')) || 0;
+
+      // rating
+      let ratingVal = 0;
+      if (idx.rating >= 0) {
+        const r = row[idx.rating];
+        ratingVal = typeof r === 'number' ? r : parseFloat(String(r || '').trim()) || 0;
+      }
+
+      // hasOffers - interpret truthy values
+      let hasOffersVal = false;
+      if (idx.hasOffers >= 0) {
+        const h = String(row[idx.hasOffers] || '').toLowerCase().trim();
+        hasOffersVal = (h === 'true' || h === 'yes' || h === '1');
+      }
+
+      // isVeg
+      let isVegVal = null;
+      if (idx.isVeg >= 0) {
+        const v = String(row[idx.isVeg] || '').toLowerCase().trim();
+        if (v === 'true' || v === 'yes' || v === '1') isVegVal = true;
+        else if (v === 'false' || v === 'no' || v === '0') isVegVal = false;
+      }
 
       menuItems.push({
-        id: row[0] || `item-${i}`,
-        name: row[1] || '',
-        description: row[2] || '',
-        price: parseFloat(row[3]) || 0,
-        category: row[4] || 'Other',
-        image: row[5] || ''
+        id: (row[idx.id] || `item-${i}`).toString(),
+        name: (row[idx.name] || '').toString(),
+        description: (row[idx.description] || '').toString(),
+        price: priceVal,
+        category: (row[idx.category] || 'Other').toString(),
+        image: (row[idx.image] || '').toString(),
+        // optional fields
+        rating: ratingVal,
+        hasOffers: hasOffersVal,
+        // keep undefined/null when not specified to avoid false assumptions
+        isVeg: isVegVal
       });
     }
 
