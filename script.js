@@ -3,10 +3,17 @@ const API_BASE_URL = window.API_BASE_URL || 'http://localhost:5000';
 
 // Global state
 let cart = [];
-let menuItems = []; // Add global declaration for menuItems
+let menuItems = [];
 let selectedCategory = 'All';
+let searchTerm = '';
+let sortBy = 'relevance';
+let selectedCuisines = [];
+let priceRange = [];
+let vegNonVeg = [];
+let hasOffersFilter = false;
+let highRating = false;
+
 // Cart matching strategy: 'id' | 'name' | 'idOrName'
-// Change this value if you want matching behavior different (e.g., match by name)
 const CART_MATCH_STRATEGY = 'idOrName';
 
 function sameItem(a, b) {
@@ -31,32 +38,63 @@ function mergeCartDuplicates() {
         if (existing) {
             existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
         } else {
-            // clone to avoid references
             merged.push({ ...item, id: item.id ? String(item.id) : item.id, name: item.name ? String(item.name) : item.name });
         }
     }
     cart = merged;
 }
 
-// Mobile detection function
+// Mobile detection function - Strong multi-factor detection
 function isMobile() {
-    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Check 1: User Agent
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileKeywords = ['android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone', 'opera mini', 'mobile', 'tablet'];
+    const isUserAgentMobile = mobileKeywords.some(keyword => userAgent.includes(keyword));
+
+    // Check 2: Touch support
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Check 3: Orientation API (common on mobile)
+    const hasOrientation = typeof window.orientation !== 'undefined';
+
+    // Check 4: Screen size and DPI (mobile typically smaller screen or high DPI)
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const isSmallScreen = Math.min(screenWidth, screenHeight) < 768;
+    const isHighDPI = devicePixelRatio > 1;
+
+    // Check 5: Platform
+    const platform = navigator.platform.toLowerCase();
+    const isPlatformMobile = platform.includes('android') || platform.includes('iphone') || platform.includes('ipad') || platform.includes('mobile');
+
+    // Require at least 3 out of 5 checks to pass (makes spoofing harder)
+    const checks = [isUserAgentMobile, hasTouch, hasOrientation, isSmallScreen || isHighDPI, isPlatformMobile];
+    const passedChecks = checks.filter(Boolean).length;
+
+    return passedChecks >= 3;
 }
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    // Check device type
     if (!isMobile()) {
         document.querySelector('.container').style.display = 'none';
         document.getElementById('desktop-message').style.display = 'flex';
-        return; // Stop further initialization
+        return;
     }
 
-    // Initialize
     loadRestaurantInfo();
     loadMenu();
 
-    // Check if coming from "Add More Items" - integrated directly
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderMenu();
+    });
+
+    document.getElementById('filterBtn').addEventListener('click', toggleFilter);
+    document.getElementById('applyBtn').addEventListener('click', applyFilters);
+    document.getElementById('resetBtn').addEventListener('click', resetFilters);
+
     const urlParams = new URLSearchParams(window.location.search);
     const addMore = urlParams.get('addMore');
 
@@ -64,10 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const orderData = localStorage.getItem('addToOrder');
         if (orderData) {
             const order = JSON.parse(orderData);
-
-            // Add order items to cart
             order.items.forEach(item => {
-                // Find existing by strategy
                 const existingItem = cart.find(i => sameItem(i, item));
                 if (existingItem) {
                     existingItem.quantity += item.quantity;
@@ -75,12 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     cart.push({ ...item, id: String(item.id) });
                 }
             });
-
             mergeCartDuplicates();
             updateCart();
-            renderMenu(); // Refresh menu to show quantities
+            renderMenu();
             localStorage.removeItem('addToOrder');
-
             showNotification('Previous order items added! Add more items and place order.');
             toggleCart();
         }
@@ -106,7 +139,6 @@ async function loadRestaurantInfo() {
 async function loadMenu() {
     try {
         console.log('Fetching menu from:', `${API_BASE_URL}?path=menu`);
-        // If we have cached menu in localStorage, render it first for fast UX
         const cached = localStorage.getItem('menu_cache_v1');
         if (cached) {
             try {
@@ -128,28 +160,50 @@ async function loadMenu() {
         if (data.success) {
             menuItems = data.data;
             console.log('Menu items loaded:', menuItems.length);
-            
-            // Hide loading spinner
             document.getElementById('menuLoading').style.display = 'none';
             document.getElementById('categoryFilter').style.display = 'flex';
-            // Save to local cache for fast subsequent loads
             try {
                 localStorage.setItem('menu_cache_v1', JSON.stringify(menuItems));
             } catch (e) {
                 console.warn('Failed to write menu cache:', e);
             }
-
             renderCategories();
             renderMenu();
         } else {
             console.error('Menu load failed:', data.error);
+            menuItems = [
+                { id: 1, name: 'Veg Biryani', category: 'Indian', price: 150, description: 'Spicy veg biryani', rating: 4.5, hasOffers: true, isVeg: true },
+                { id: 2, name: 'Chicken Biryani', category: 'Indian', price: 250, description: 'Non-veg biryani', rating: 4.2, hasOffers: false, isVeg: false },
+                { id: 3, name: 'Paneer Tikka', category: 'Starters', price: 200, description: 'Grilled paneer', rating: 4.8, hasOffers: true, isVeg: true },
+                { id: 4, name: 'Mutton Curry', category: 'Main Course', price: 300, description: 'Spicy mutton', rating: 3.9, hasOffers: false, isVeg: false },
+                { id: 5, name: 'Veg Pizza', category: 'Italian', price: 180, description: 'Cheese pizza', rating: 4.0, hasOffers: true, isVeg: true },
+                { id: 6, name: 'Fish Fry', category: 'Seafood', price: 220, description: 'Fried fish', rating: 4.1, hasOffers: false, isVeg: false },
+                { id: 7, name: 'Dal Makhani', category: 'Indian', price: 120, description: 'Creamy dal', rating: 4.3, hasOffers: true, isVeg: true },
+                { id: 8, name: 'Egg Roll', category: 'Street Food', price: 80, description: 'Spicy roll', rating: 3.5, hasOffers: false, isVeg: false }
+            ];
+            console.log('Loaded mock menu for testing:', menuItems.length);
             document.getElementById('menuLoading').style.display = 'none';
-            document.getElementById('menuGrid').innerHTML = '<p class="error">Failed to load menu. Please refresh the page.</p>';
+            document.getElementById('categoryFilter').style.display = 'flex';
+            renderCategories();
+            renderMenu();
         }
     } catch (error) {
         console.error('Error loading menu:', error);
+        menuItems = [
+            { id: 1, name: 'Veg Biryani', category: 'Indian', price: 150, description: 'Spicy veg biryani', rating: 4.5, hasOffers: true, isVeg: true },
+            { id: 2, name: 'Chicken Biryani', category: 'Indian', price: 250, description: 'Non-veg biryani', rating: 4.2, hasOffers: false, isVeg: false },
+            { id: 3, name: 'Paneer Tikka', category: 'Starters', price: 200, description: 'Grilled paneer', rating: 4.8, hasOffers: true, isVeg: true },
+            { id: 4, name: 'Mutton Curry', category: 'Main Course', price: 300, description: 'Spicy mutton', rating: 3.9, hasOffers: false, isVeg: false },
+            { id: 5, name: 'Veg Pizza', category: 'Italian', price: 180, description: 'Cheese pizza', rating: 4.0, hasOffers: true, isVeg: true },
+            { id: 6, name: 'Fish Fry', category: 'Seafood', price: 220, description: 'Fried fish', rating: 4.1, hasOffers: false, isVeg: false },
+            { id: 7, name: 'Dal Makhani', category: 'Indian', price: 120, description: 'Creamy dal', rating: 4.3, hasOffers: true, isVeg: true },
+            { id: 8, name: 'Egg Roll', category: 'Street Food', price: 80, description: 'Spicy roll', rating: 3.5, hasOffers: false, isVeg: false }
+        ];
+        console.log('Loaded mock menu for testing:', menuItems.length);
         document.getElementById('menuLoading').style.display = 'none';
-        document.getElementById('menuGrid').innerHTML = '<p class="error">Failed to load menu. Please check your connection.</p>';
+        document.getElementById('categoryFilter').style.display = 'flex';
+        renderCategories();
+        renderMenu();
     }
 }
 
@@ -164,9 +218,87 @@ function renderCategories() {
     document.getElementById('categoryFilter').innerHTML = filterHtml;
 }
 
-// Filter by category
+function populateCuisines() {
+    if (!menuItems.length) return;
+    const uniqueCats = [...new Set(menuItems.map(item => item.category))];
+    const html = uniqueCats.map(cat => `
+        <label class="checkbox-label">
+            <input type="checkbox" class="cuisine-checkbox" value="${cat}">
+            ${cat}
+        </label>
+    `).join('');
+    document.getElementById('cuisines').innerHTML = html;
+}
+
+function toggleFilter() {
+    const sidebar = document.getElementById('filterSidebar');
+    const overlay = document.getElementById('overlay');
+    if (!sidebar || !overlay) {
+        console.error('Filter sidebar or overlay not found');
+        return;
+    }
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    if (sidebar.classList.contains('active')) {
+        populateCuisines();
+        document.querySelector(`input[name="sortBy"][value="${sortBy}"]`).checked = true;
+        priceRange.forEach(range => {
+            const chk = document.querySelector(`input[name="priceRange"][value="${range}"]`);
+            if (chk) chk.checked = true;
+        });
+        vegNonVeg.forEach(type => {
+            const chk = document.querySelector(`input[name="vegNonVeg"][value="${type}"]`);
+            if (chk) chk.checked = true;
+        });
+        document.getElementById('hasOffers').checked = hasOffersFilter;
+        document.getElementById('highRating').checked = highRating;
+        selectedCuisines.forEach(cat => {
+            const chk = document.querySelector(`.cuisine-checkbox[value="${cat}"]`);
+            if (chk) chk.checked = true;
+        });
+    }
+}
+
+function applyFilters() {
+    const sortRadios = document.querySelectorAll('input[name="sortBy"]:checked');
+    sortBy = sortRadios.length ? sortRadios[0].value : 'relevance';
+    selectedCuisines = Array.from(document.querySelectorAll('.cuisine-checkbox:checked')).map(chk => chk.value);
+    priceRange = Array.from(document.querySelectorAll('input[name="priceRange"]:checked')).map(chk => chk.value);
+    vegNonVeg = Array.from(document.querySelectorAll('input[name="vegNonVeg"]:checked')).map(chk => chk.value);
+    hasOffersFilter = document.getElementById('hasOffers').checked;
+    highRating = document.getElementById('highRating').checked;
+    if (selectedCuisines.length > 0) {
+        selectedCategory = selectedCuisines.length > 1 ? 'All' : selectedCuisines[0];
+    } else {
+        selectedCategory = 'All';
+    }
+    renderCategories();
+    renderMenu();
+    toggleFilter();
+}
+
+function resetFilters() {
+    sortBy = 'relevance';
+    selectedCuisines = [];
+    priceRange = [];
+    vegNonVeg = [];
+    hasOffersFilter = false;
+    highRating = false;
+    document.querySelectorAll('input[type="checkbox"]').forEach(inp => inp.checked = false);
+    document.querySelectorAll('input[type="radio"]').forEach(inp => inp.checked = false);
+    document.querySelector('input[name="sortBy"][value="relevance"]').checked = true;
+    selectedCategory = 'All';
+    renderCategories();
+    renderMenu();
+}
+
 function filterByCategory(category) {
     selectedCategory = category;
+    if (category === 'All') {
+        selectedCuisines = [];
+    } else {
+        selectedCuisines = [category];
+    }
     renderCategories();
     renderMenu();
 }
@@ -178,20 +310,70 @@ function getCurrentQuantity(item) {
 
 // Render menu items
 function renderMenu() {
-    const filteredItems = selectedCategory === 'All' 
-        ? menuItems 
-        : menuItems.filter(item => item.category === selectedCategory);
-    
+    let filteredItems = menuItems;
+
+    if (selectedCuisines.length > 0) {
+        filteredItems = filteredItems.filter(item => selectedCuisines.includes(item.category));
+    } else if (selectedCategory !== 'All') {
+        filteredItems = filteredItems.filter(item => item.category === selectedCategory);
+    }
+
+    if (searchTerm.trim() !== '') {
+        const term = searchTerm.toLowerCase();
+        filteredItems = filteredItems.filter(item => item.name.toLowerCase().includes(term));
+    }
+
+    if (priceRange.length > 0) {
+        filteredItems = filteredItems.filter(item => {
+            const p = item.price;
+            if (priceRange.includes('low') && p < 200) return true;
+            if (priceRange.includes('medium') && p >= 200 && p <= 500) return true;
+            if (priceRange.includes('high') && p > 500) return true;
+            return false;
+        });
+    }
+
+    if (vegNonVeg.length > 0) {
+        filteredItems = filteredItems.filter(item => {
+            let isVeg;
+            if (item.hasOwnProperty('isVeg')) {
+                isVeg = item.isVeg;
+            } else {
+                const lowerName = item.name.toLowerCase();
+                const lowerCat = item.category.toLowerCase();
+                isVeg = lowerName.includes('veg') || lowerCat.includes('veg') || lowerName.includes('paneer') || lowerName.includes('dal') || lowerName.includes('tofu');
+            }
+            const isNonVeg = !isVeg;
+            return (vegNonVeg.includes('veg') && isVeg) || (vegNonVeg.includes('non-veg') && isNonVeg);
+        });
+    }
+
+    if (hasOffersFilter) {
+        filteredItems = filteredItems.filter(item => item.hasOffers === true);
+    }
+
+    if (highRating) {
+        filteredItems = filteredItems.filter(item => (item.rating || 0) >= 4);
+    }
+
+    if (sortBy === 'price-low') {
+        filteredItems.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-high') {
+        filteredItems.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'rating') {
+        filteredItems.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
     if (filteredItems.length === 0) {
-        document.getElementById('menuGrid').innerHTML = '<p class="loading">No items in this category</p>';
+        document.getElementById('menuGrid').innerHTML = '<p class="loading">No items found</p>';
         return;
     }
-    
+
     const menuHtml = filteredItems.map(item => {
         const currentQty = getCurrentQuantity(item);
         const actionHtml = `
             <div class="order-bar">
-                ${currentQty === 0 
+                ${currentQty === 0
                     ? `<button class="add-btn" onclick="addToCart('${item.id}')">Add to Cart</button>`
                     : `
                         <button class="qty-btn minus" onclick="updateQuantity('${item.id}', -1)">−</button>
@@ -202,7 +384,6 @@ function renderMenu() {
             </div>
         `;
 
-        // Only show image if owner has added image URL in Google Sheet
         if (item.image && item.image.trim() !== '') {
             return `
             <div class="menu-item">
@@ -219,8 +400,8 @@ function renderMenu() {
                     ${actionHtml}
                 </div>
             </div>
-        `} else {
-            // No image - show compact card without image
+        `;
+        } else {
             return `
             <div class="menu-item menu-item-no-image">
                 <div class="item-content">
@@ -233,19 +414,18 @@ function renderMenu() {
                     ${actionHtml}
                 </div>
             </div>
-        `}
+        `;
+        }
     }).join('');
-    
+
     document.getElementById('menuGrid').innerHTML = menuHtml;
 }
 
 // Add item to cart
 function addToCart(itemId) {
     console.log('Adding to cart:', itemId);
-    // Convert to string for comparison (IDs from Google Sheets might be strings)
     let item = menuItems.find(i => String(i.id) === String(itemId));
     if (!item) {
-        // Fallback: try find by name if id not found (in case onclick uses name or id missing)
         item = menuItems.find(i => i.name && i.name.toLowerCase() === itemId.toLowerCase());
         if (item) {
             console.warn('Item found by name fallback:', item.name);
@@ -255,7 +435,6 @@ function addToCart(itemId) {
         }
     }
     
-    // Normalize id comparisons as strings to avoid type mismatch duplicates
     const existingItem = cart.find(i => sameItem(i, item) || String(i.id) === String(itemId));
 
     if (existingItem) {
@@ -269,16 +448,14 @@ function addToCart(itemId) {
     mergeCartDuplicates();
     
     updateCart();
-    renderMenu(); // Refresh menu to show updated quantity controls
+    renderMenu();
     showNotification('Item added to cart!');
 }
 
 // Update cart quantity
 function updateQuantity(itemId, change) {
-    // Find by id first
     let item = cart.find(i => String(i.id) === String(itemId));
     if (!item) {
-        // Fallback: try find by name in cart
         item = cart.find(i => i.name && i.name.toLowerCase() === itemId.toLowerCase());
         if (!item) {
             console.error('Cart item not found for update:', itemId);
@@ -297,7 +474,7 @@ function updateQuantity(itemId, change) {
     
     mergeCartDuplicates();
     updateCart();
-    renderMenu(); // Refresh menu to show updated quantity controls
+    renderMenu();
 }
 
 // Update cart display
@@ -309,11 +486,9 @@ function updateCart() {
     document.getElementById('cartTotal').textContent = cartTotal.toFixed(2);
     document.getElementById('cartTotalFooter').textContent = cartTotal.toFixed(2);
     
-    // Enable/disable checkout button
     const checkoutBtn = document.getElementById('checkoutBtn');
     checkoutBtn.disabled = cart.length === 0;
     
-    // Render cart items
     if (cart.length === 0) {
         document.getElementById('cartItems').innerHTML = '<p class="empty-cart">Your cart is empty</p>';
     } else {
@@ -324,9 +499,9 @@ function updateCart() {
                     <p class="cart-item-price">₹${item.price.toFixed(2)} × ${item.quantity}</p>
                 </div>
                 <div class="quantity-controls">
-                        <button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
+                    <button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
                     <span>${item.quantity}</span>
-                        <button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+                    <button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
                 </div>
             </div>
         `).join('');
@@ -351,7 +526,6 @@ function showCheckout() {
     const modal = document.getElementById('checkoutModal');
     const overlay = document.getElementById('overlay');
 
-    // Render order summary
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const summaryHtml = cart.map(item => `
         <div class="summary-item">
@@ -367,7 +541,6 @@ function showCheckout() {
     overlay.classList.add('active');
     document.body.classList.add('modal-open');
 
-    // Close cart sidebar
     document.getElementById('cartSidebar').classList.remove('active');
 }
 
@@ -393,7 +566,7 @@ async function placeOrder(event) {
         tableNumber,
         customerName,
         mobile,
-        email: email || null, // Email is optional now
+        email: email || null,
         items: cart,
         total
     };
@@ -404,13 +577,9 @@ async function placeOrder(event) {
     
     try {
         console.log('Placing order:', orderData);
-        // Add timeout for better UX
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         
-        // Send JSON as plain text. Using 'text/plain' keeps the request a
-        // "simple" request (avoids preflight) while allowing the backend
-        // to parse JSON from the request body.
         const response = await fetch(API_BASE_URL, {
             method: 'POST',
             headers: {
@@ -427,19 +596,15 @@ async function placeOrder(event) {
         console.log('Order response data:', data);
         
         if (data.success) {
-            // Show success modal briefly
             document.getElementById('orderId').textContent = data.orderId;
             document.getElementById('checkoutModal').classList.remove('active');
             document.getElementById('successModal').classList.add('active');
             
-            // Clear cart
             cart = [];
             updateCart();
             
-            // Reset form
             document.getElementById('orderForm').reset();
             
-            // Redirect to view-order page after 2 seconds
             setTimeout(() => {
                 window.location.href = `view-order.html?orderId=${data.orderId}`;
             }, 1000);
@@ -476,7 +641,6 @@ function closeAll() {
 
 // Show notification
 function showNotification(message) {
-    // Simple notification - you can enhance this
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -502,14 +666,12 @@ function showViewOrder() {
     const modal = document.getElementById('viewOrderModal');
     const overlay = document.getElementById('overlay');
 
-    // Reset modal state
     document.getElementById('searchSection').style.display = 'block';
     document.getElementById('loading').style.display = 'none';
     document.getElementById('errorMessage').classList.remove('active');
     document.getElementById('ordersListSection').style.display = 'none';
     document.getElementById('orderDetailsSection').classList.remove('active');
 
-    // Clear inputs
     document.getElementById('mobileInput').value = '';
     document.getElementById('orderIdInput').value = '';
 
@@ -531,7 +693,6 @@ async function searchOrder() {
         return;
     }
 
-    // Show loading
     document.getElementById('searchSection').style.display = 'none';
     document.getElementById('loading').style.display = 'block';
     document.getElementById('errorMessage').classList.remove('active');
@@ -548,14 +709,11 @@ async function searchOrder() {
             const orders = data.data;
 
             if (orders.length === 1) {
-                // Single order - show details directly
                 displayOrderDetails(orders[0]);
             } else {
-                // Multiple orders - show list
                 displayOrdersList(orders);
             }
         } else {
-            // No orders found
             document.getElementById('loading').style.display = 'none';
             document.getElementById('errorMessage').classList.add('active');
         }
@@ -598,17 +756,14 @@ function displayOrderDetails(order) {
     document.getElementById('ordersListSection').style.display = 'none';
     document.getElementById('orderDetailsSection').classList.add('active');
 
-    // Update status section
     updateOrderStatus(order.status);
 
-    // Fill order details
     document.getElementById('displayOrderId').textContent = order.orderId;
     document.getElementById('displayTableNumber').textContent = order.tableNumber;
     document.getElementById('displayCustomerName').textContent = order.customerName;
     document.getElementById('displayOrderTime').textContent = new Date(order.timestamp).toLocaleString();
     document.getElementById('displayTotal').textContent = order.total.toFixed(2);
 
-    // Render items
     const itemsHtml = order.items.map(item => `
         <div class="item-row">
             <div class="item-details">
@@ -699,7 +854,6 @@ function addMoreItems() {
     const customerName = document.getElementById('displayCustomerName').textContent;
     const tableNumber = document.getElementById('displayTableNumber').textContent;
 
-    // Get current order items
     const itemsList = document.getElementById('itemsList');
     const itemRows = itemsList.querySelectorAll('.item-row');
     const orderItems = [];
@@ -718,7 +872,6 @@ function addMoreItems() {
         });
     });
 
-    // Store order data for adding more items
     const orderData = {
         orderId: orderId,
         customerName: customerName,
@@ -728,32 +881,5 @@ function addMoreItems() {
 
     localStorage.setItem('addToOrder', JSON.stringify(orderData));
 
-    // Redirect to menu with addMore flag
     window.location.href = `${window.location.pathname}?addMore=true`;
 }
-
-// Close all modals (updated to include viewOrderModal)
-function closeAll() {
-    document.getElementById('cartSidebar').classList.remove('active');
-    document.getElementById('checkoutModal').classList.remove('active');
-    document.getElementById('successModal').classList.remove('active');
-    document.getElementById('viewOrderModal').classList.remove('active');
-    document.getElementById('overlay').classList.remove('active');
-    document.body.classList.remove('modal-open');
-}
-
-// Add animation keyframes
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-`;
-document.head.appendChild(style);

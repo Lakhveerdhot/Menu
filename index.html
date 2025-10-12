@@ -7,7 +7,10 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="desktop-message" style="display:none;">This site is available only on mobile devices.</div>
+    <div id="desktop-message" style="display:none;">
+        <h1>This website is only available on mobile devices.</h1>
+        <p>📱 Mobile only: Please open this site on your smartphone to continue.</p>
+    </div>
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -29,15 +32,23 @@
         <section class="menu-section">
             <div class="menu-header">
                 <h2>Our Menu</h2>
-                <button class="view-order-btn" onclick="showViewOrder()">📋 View My Orders</button>
+                <div class="header-actions">
+                    <button id="filterBtn" class="filter-btn" onclick="toggleFilter()">Filter 🔍</button>
+                    <button class="view-order-btn" onclick="showViewOrder()">📋 View My Orders</button>
+                </div>
             </div>
-            
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search your favorite food…">
+            </div>
+
             <!-- Loading Spinner -->
             <div class="loading-spinner" id="menuLoading">
                 <div class="spinner"></div>
                 <p>Loading menu...</p>
             </div>
-            
+
             <div class="category-filter" id="categoryFilter" style="display: none;"></div>
             <div class="menu-grid" id="menuGrid"></div>
         </section>
@@ -48,7 +59,7 @@
                 <h2>Your Cart</h2>
                 <button class="close-cart" onclick="toggleCart()">✕</button>
             </div>
-            
+
             <div class="cart-items" id="cartItems">
                 <p class="empty-cart">Your cart is empty</p>
             </div>
@@ -64,6 +75,84 @@
             </div>
         </div>
 
+        <!-- Filter Sidebar -->
+        <div class="filter-sidebar" id="filterSidebar">
+            <div class="filter-header">
+                <h2>Filters & Sort</h2>
+                <button class="close-filter" onclick="toggleFilter()">✕</button>
+            </div>
+
+            <div class="filter-content">
+                <div class="sort-section">
+                    <h3>Sort by</h3>
+                    <label class="radio-label">
+                        <input type="radio" name="sortBy" value="relevance" checked>
+                        Relevance (Default)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="sortBy" value="price-low">
+                        Price: Low to High
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="sortBy" value="price-high">
+                        Price: High to Low
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="sortBy" value="rating">
+                        Rating: High to Low
+                    </label>
+                </div>
+                <div class="filter-section">
+                    <h3>Cuisines</h3>
+                    <div id="cuisines" class="checkbox-group"></div>
+                    <h3>Price Range</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="priceRange" value="low">
+                            <₹200
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="priceRange" value="medium">
+                            ₹200 - ₹500
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="priceRange" value="high">
+                            >₹500
+                        </label>
+                    </div>
+                    <h3>Veg/Non-Veg</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="vegNonVeg" value="veg">
+                            Veg
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="vegNonVeg" value="non-veg">
+                            Non-Veg
+                        </label>
+                    </div>
+                    <h3>Offers</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hasOffers">
+                            Has Offers
+                        </label>
+                    </div>
+                    <h3>Ratings</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="highRating">
+                            4+ Stars
+                        </label>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button id="resetBtn" class="reset-filter-btn">Reset</button>
+                    <button id="applyBtn" class="apply-filter-btn">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Checkout Modal -->
         <div class="modal" id="checkoutModal">
             <div class="modal-content">
@@ -71,7 +160,7 @@
                     <h2>Complete Your Order</h2>
                     <button class="close-modal" onclick="closeCheckout()">✕</button>
                 </div>
-                
+
                 <form id="orderForm" onsubmit="placeOrder(event)">
                     <div class="form-group">
                         <label for="tableNumber">Table Number *</label>
