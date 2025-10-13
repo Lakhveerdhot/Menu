@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Owner Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Owner Dashboard</h1>
+      <p class="tagline">Manage Menu Items</p>
+    </header>
+
+    <main style="padding:20px;">
+      <div style="margin-bottom:10px;">
+        <label>Admin Secret: <input id="adminSecret" type="password" style="width:300px;"></label>
+        <button id="loadBtn">Load Menu</button>
+      </div>
+
+      <div id="ownerControls" style="display:none;">
+        <h3>Menu Items</h3>
+        <div id="ownerList"></div>
+
+        <h3>Add New Item</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:600px;">
+          <input id="newName" placeholder="Name">
+          <input id="newCategory" placeholder="Category">
+          <input id="newPrice" placeholder="Price" type="number">
+          <input id="newImage" placeholder="Image URL">
+          <textarea id="newDescription" placeholder="Description"></textarea>
+          <label><input type="checkbox" id="newAvailable" checked> Available</label>
+          <button id="addItemBtn">Add Item</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="owner.js"></script>
+</body>
+</html>

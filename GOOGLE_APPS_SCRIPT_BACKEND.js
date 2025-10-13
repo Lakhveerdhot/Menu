@@ -17,6 +17,10 @@ const CONFIG = {
   CUSTOMER_EMAIL_ENABLED: true        // Send confirmation emails to customers
 };
 
+// Admin secret for owner dashboard (set to a strong value before deployment)
+// If you don't want an owner dashboard, leave it as 'DISABLED' or blank.
+CONFIG.ADMIN_SECRET = CONFIG.ADMIN_SECRET || 'DISABLED';
+
 // Optional email queue configuration
 // EMAIL_QUEUE_SHEET_NAME: name of the sheet used to queue outbound emails
 // EMAIL_QUEUE_AUTO_CREATE: if true, the backend will create the sheet when missing
@@ -79,6 +83,22 @@ function doPost(e) {
       
       case 'get-stats':
         return jsonResponse(getSheetStats());
+      
+      // Admin actions (require admin secret in request body: data.adminSecret)
+      case 'admin-list-menu':
+        return jsonResponse(adminListMenu(data));
+
+      case 'admin-add-item':
+        return jsonResponse(adminAddItem(data));
+
+      case 'admin-update-item':
+        return jsonResponse(adminUpdateItem(data));
+
+      case 'admin-delete-item':
+        return jsonResponse(adminDeleteItem(data));
+
+      case 'admin-toggle-availability':
+        return jsonResponse(adminToggleAvailability(data));
       
       default:
         return jsonResponse({ 
@@ -836,4 +856,164 @@ function parseTimestamp(timestamp) {
     Logger.log('Error parsing timestamp: ' + error.toString());
     return new Date();
   }
+}
+
+// ----------------------
+// ADMIN HELPERS
+// ----------------------
+
+function checkAdminSecret(provided) {
+  if (!CONFIG.ADMIN_SECRET || CONFIG.ADMIN_SECRET === 'DISABLED') return { ok: false, error: 'Admin dashboard disabled' };
+  if (!provided) return { ok: false, error: 'Missing adminSecret' };
+  if (String(provided) !== String(CONFIG.ADMIN_SECRET)) return { ok: false, error: 'Invalid adminSecret' };
+  return { ok: true };
+}
+
+function adminListMenu(data) {
+  const auth = checkAdminSecret(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+
+  // Reuse getMenu but bypass cache to get live data
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
+    if (!sheet) return { success: false, error: 'Menu sheet not found' };
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow <= 1) return { success: true, data: [] };
+
+    const dataVals = sheet.getRange(1,1,lastRow,Math.max(lastCol,6)).getValues();
+    const header = dataVals[0].map(h => (h||'').toString().trim().toLowerCase());
+    const idx = {
+      id: header.indexOf('id') >= 0 ? header.indexOf('id') : 0,
+      name: header.indexOf('name') >= 0 ? header.indexOf('name') : 1,
+      description: header.indexOf('description') >= 0 ? header.indexOf('description') : 2,
+      price: header.indexOf('price') >= 0 ? header.indexOf('price') : 3,
+      category: header.indexOf('category') >= 0 ? header.indexOf('category') : 4,
+      image: header.indexOf('image') >= 0 ? header.indexOf('image') : 5,
+      available: header.indexOf('available') >= 0 ? header.indexOf('available') : -1
+    };
+
+    const items = [];
+    for (let i=1;i<dataVals.length;i++){
+      const r = dataVals[i];
+      if (!r[idx.id] && !r[idx.name]) continue;
+      items.push({
+        rowIndex: i+1,
+        id: r[idx.id] || `item-${i}`,
+        name: r[idx.name] || '',
+        description: r[idx.description] || '',
+        price: parseFloat(r[idx.price]) || 0,
+        category: r[idx.category] || 'Other',
+        image: r[idx.image] || '',
+        available: idx.available >=0 ? !!String(r[idx.available]).toLowerCase().match(/^(1|true|yes|y)/) : true
+      });
+    }
+    return { success: true, data: items };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function adminAddItem(data) {
+  const auth = checkAdminSecret(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
+    if (!sheet) {
+      sheet = ss.insertSheet(CONFIG.MENU_SHEET_NAME);
+      sheet.appendRow(['id','name','description','price','category','image','available']);
+    }
+    const id = data.item.id || 'id-' + Date.now();
+    const name = data.item.name || '';
+    const description = data.item.description || '';
+    const price = data.item.price || 0;
+    const category = data.item.category || 'Other';
+    const image = data.item.image || '';
+    const available = data.item.available === false ? 'no' : 'yes';
+    sheet.appendRow([id,name,description,price,category,image,available]);
+    // invalidate cache by touching cache key (if any)
+    try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+    return { success: true, item: { id, name, description, price, category, image, available } };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function adminUpdateItem(data) {
+  const auth = checkAdminSecret(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  if (!data.item || !data.item.id) return { success: false, error: 'Missing item.id' };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
+    if (!sheet) return { success: false, error: 'Menu sheet not found' };
+    const rows = sheet.getDataRange().getValues();
+    const header = rows[0].map(h => (h||'').toString().trim().toLowerCase());
+    const idCol = header.indexOf('id') >=0 ? header.indexOf('id') : 0;
+    const map = { name: header.indexOf('name')>=0?header.indexOf('name'):1, description: header.indexOf('description')>=0?header.indexOf('description'):2, price: header.indexOf('price')>=0?header.indexOf('price'):3, category: header.indexOf('category')>=0?header.indexOf('category'):4, image: header.indexOf('image')>=0?header.indexOf('image'):5, available: header.indexOf('available')>=0?header.indexOf('available'):-1 };
+    for (let i=1;i<rows.length;i++){
+      const r = rows[i];
+      if (String(r[idCol]) === String(data.item.id)){
+        const updates = [];
+        if (data.item.name !== undefined) sheet.getRange(i+1, map.name+1).setValue(data.item.name);
+        if (data.item.description !== undefined) sheet.getRange(i+1, map.description+1).setValue(data.item.description);
+        if (data.item.price !== undefined) sheet.getRange(i+1, map.price+1).setValue(data.item.price);
+        if (data.item.category !== undefined) sheet.getRange(i+1, map.category+1).setValue(data.item.category);
+        if (data.item.image !== undefined) sheet.getRange(i+1, map.image+1).setValue(data.item.image);
+        if (map.available>=0 && data.item.available!==undefined) sheet.getRange(i+1, map.available+1).setValue(data.item.available? 'yes':'no');
+        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Item not found' };
+  } catch (e) { return { success: false, error: e.toString() }; }
+}
+
+function adminDeleteItem(data) {
+  const auth = checkAdminSecret(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  if (!data.id) return { success: false, error: 'Missing id' };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
+    if (!sheet) return { success: false, error: 'Menu sheet not found' };
+    const rows = sheet.getDataRange().getValues();
+    const header = rows[0].map(h => (h||'').toString().trim().toLowerCase());
+    const idCol = header.indexOf('id')>=0?header.indexOf('id'):0;
+    for (let i=1;i<rows.length;i++){
+      if (String(rows[i][idCol]) === String(data.id)){
+        sheet.deleteRow(i+1);
+        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'Item not found' };
+  } catch (e) { return { success: false, error: e.toString() }; }
+}
+
+function adminToggleAvailability(data) {
+  const auth = checkAdminSecret(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  if (!data.id) return { success: false, error: 'Missing id' };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
+    if (!sheet) return { success: false, error: 'Menu sheet not found' };
+    const rows = sheet.getDataRange().getValues();
+    const header = rows[0].map(h => (h||'').toString().trim().toLowerCase());
+    const idCol = header.indexOf('id')>=0?header.indexOf('id'):0;
+    const availCol = header.indexOf('available')>=0?header.indexOf('available'):-1;
+    if (availCol < 0) return { success: false, error: 'No available column in menu sheet' };
+    for (let i=1;i<rows.length;i++){
+      if (String(rows[i][idCol]) === String(data.id)){
+        const newVal = (data.available === true) ? 'yes' : (data.available === false ? 'no' : (String(rows[i][availCol]) === 'yes' ? 'no' : 'yes'));
+        sheet.getRange(i+1, availCol+1).setValue(newVal);
+        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+        return { success: true, available: newVal };
+      }
+    }
+    return { success: false, error: 'Item not found' };
+  } catch (e) { return { success: false, error: e.toString() }; }
 }
