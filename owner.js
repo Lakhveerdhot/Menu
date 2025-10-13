@@ -40,19 +40,21 @@ function renderOwnerList(items) {
       <div>₹${it.price}</div>
       <div>${it.description || ''}</div>
       <div>Available: ${it.available ? 'yes' : 'no'}</div>
-      <button data-id="${it.id}" class="toggleBtn">Toggle</button>
+      <button data-id="${it.id}" data-available="true" class="availBtn yes">Yes</button>
+      <button data-id="${it.id}" data-available="false" class="availBtn no">No</button>
       <button data-id="${it.id}" class="deleteBtn">Delete</button>
     `;
     container.appendChild(el);
   });
 
-  container.querySelectorAll('.toggleBtn').forEach(b => {
+  container.querySelectorAll('.availBtn').forEach(b => {
     b.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
-      const res = await callAdmin('admin-toggle-availability', { id });
-      if (!res.success) return showMessage('Failed to toggle: ' + res.error);
-      b.textContent = 'Toggled';
-      // reload
+      const available = e.target.dataset.available === 'true';
+      const res = await callAdmin('admin-toggle-availability', { id, available });
+      if (!res.success) return showMessage('Failed to update availability: ' + res.error);
+      showMessage('Availability updated: ' + (available ? 'yes' : 'no'));
+      // reload to reflect new state
       document.getElementById('loadBtn').click();
     });
   });

@@ -932,9 +932,9 @@ function adminAddItem(data) {
     const category = data.item.category || 'Other';
     const image = data.item.image || '';
     const available = data.item.available === false ? 'no' : 'yes';
-    sheet.appendRow([id,name,description,price,category,image,available]);
-    // invalidate cache by touching cache key (if any)
-    try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+  sheet.appendRow([id,name,description,price,category,image,available]);
+  // invalidate menu cache so getMenu() will refresh
+  try { invalidateMenuCache(sheet); } catch(e){}
     return { success: true, item: { id, name, description, price, category, image, available } };
   } catch (e) {
     return { success: false, error: e.toString() };
@@ -963,7 +963,7 @@ function adminUpdateItem(data) {
         if (data.item.category !== undefined) sheet.getRange(i+1, map.category+1).setValue(data.item.category);
         if (data.item.image !== undefined) sheet.getRange(i+1, map.image+1).setValue(data.item.image);
         if (map.available>=0 && data.item.available!==undefined) sheet.getRange(i+1, map.available+1).setValue(data.item.available? 'yes':'no');
-        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+  try { invalidateMenuCache(sheet); } catch(e){}
         return { success: true };
       }
     }
@@ -984,8 +984,8 @@ function adminDeleteItem(data) {
     const idCol = header.indexOf('id')>=0?header.indexOf('id'):0;
     for (let i=1;i<rows.length;i++){
       if (String(rows[i][idCol]) === String(data.id)){
-        sheet.deleteRow(i+1);
-        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+  sheet.deleteRow(i+1);
+  try { invalidateMenuCache(sheet); } catch(e){}
         return { success: true };
       }
     }
@@ -1010,10 +1010,26 @@ function adminToggleAvailability(data) {
       if (String(rows[i][idCol]) === String(data.id)){
         const newVal = (data.available === true) ? 'yes' : (data.available === false ? 'no' : (String(rows[i][availCol]) === 'yes' ? 'no' : 'yes'));
         sheet.getRange(i+1, availCol+1).setValue(newVal);
-        try { CacheService.getScriptCache().remove('menu_cache_v1'); } catch(e){}
+        try { invalidateMenuCache(sheet); } catch(e){}
         return { success: true, available: newVal };
       }
     }
     return { success: false, error: 'Item not found' };
   } catch (e) { return { success: false, error: e.toString() }; }
+}
+
+// Invalidate menu cache by matching the dynamic cache key used in getMenu()
+function invalidateMenuCache(sheet) {
+  try {
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    const key = `menu_cache_v1_${lastRow}_${lastCol}`;
+    // remove the exact key and also try to remove any older variants nearby
+    const cache = CacheService.getScriptCache();
+    cache.remove(key);
+    // best-effort: attempt to remove base key too
+    try { cache.remove('menu_cache_v1'); } catch(e){}
+  } catch (e) {
+    Logger.log('invalidateMenuCache error: ' + e.toString());
+  }
 }
