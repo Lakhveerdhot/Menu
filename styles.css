@@ -434,8 +434,12 @@ body.modal-open {
 @media (max-width: 800px) {
     .content-row { flex-direction:column; }
     .stats-row { flex-direction:column; }
-    .header-right { margin-top:12px; }
-    .secret-input { width:140px; }
+    .dashboard .header { padding:20px 15px; }
+    .dashboard .header-right { margin-top:0; }
+    .secret-row { flex-direction:column; gap:10px; width:100%; }
+    .secret-row label { width:100%; display:flex; align-items:center; gap:6px; }
+    .secret-input { width:100% !important; }
+    .btn.large { width:100%; padding:12px; }
     .dashboard-main { padding:12px; }
     .orders-table { font-size:0.75em; min-width:500px; }
     .orders-table th, .orders-table td { padding:6px 4px; font-size:0.9em; }
@@ -448,6 +452,9 @@ body.modal-open {
 }
 
 /* Dashboard layout */
+.dashboard .header { display:flex; flex-direction:column; gap:16px; align-items:center; }
+.dashboard .header-left { text-align:center; }
+.dashboard .header-right { width:100%; max-width:600px; }
 .dashboard-main { padding: 24px; }
 .stats-row { display:flex; gap:16px; margin-bottom:20px; }
 .stat-card { flex:1; padding:18px; border-radius:12px; background: linear-gradient(180deg,#fff,#fbfbfb); box-shadow: var(--shadow); }
