@@ -20,7 +20,7 @@ const CONFIG = {
 // Admin and Staff secrets for owner dashboard (set to strong values before deployment)
 // If you don't want an owner dashboard, leave secrets as 'DISABLED' or blank.
 CONFIG.ADMIN_SECRET = CONFIG.ADMIN_SECRET || '852852';
-CONFIG.STAFF_SECRET = CONFIG.STAFF_SECRET || 'STAFF-0000';
+CONFIG.STAFF_SECRET = CONFIG.STAFF_SECRET || '123456';
 
 // Optional email queue configuration
 // EMAIL_QUEUE_SHEET_NAME: name of the sheet used to queue outbound emails
