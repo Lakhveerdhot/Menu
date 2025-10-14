@@ -69,8 +69,16 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
     document.getElementById('userRoleDisplay').textContent = `Logged in as: ${role.toUpperCase()}`;
     
     document.getElementById('ownerControls').style.display = 'block';
-    document.getElementById('addItemControls').style.display = 'block';
     document.getElementById('menuManagementBtn').style.display = 'block';
+    
+    // Show "Add Item" panel only for admin
+    if (role === 'admin') {
+      document.getElementById('addItemPanel').style.display = 'block';
+      document.getElementById('addItemControls').style.display = 'block';
+    } else {
+      document.getElementById('addItemPanel').style.display = 'none';
+      document.getElementById('addItemControls').style.display = 'none';
+    }
     document.getElementById('roleDisplay')?.remove();
     const hdr = document.createElement('div');
     hdr.id = 'roleDisplay';
