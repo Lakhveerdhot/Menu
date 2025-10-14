@@ -91,8 +91,14 @@ body.modal-open {
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid var(--light-color);
-    z-index: 100;
-    box-shadow: var(--shadow);
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.cart-summary.scrolled {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    padding: 12px 20px;
 }
 
 .cart-info {

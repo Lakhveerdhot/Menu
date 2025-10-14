@@ -13,6 +13,18 @@ let vegNonVeg = [];
 let hasOffersFilter = false;
 let highRating = false;
 
+// Sticky cart summary on scroll
+window.addEventListener('scroll', () => {
+    const cartSummary = document.getElementById('cartSummary');
+    if (cartSummary) {
+        if (window.scrollY > 50) {
+            cartSummary.classList.add('scrolled');
+        } else {
+            cartSummary.classList.remove('scrolled');
+        }
+    }
+});
+
 // Cart matching strategy: 'id' | 'name' | 'idOrName'
 const CART_MATCH_STRATEGY = 'idOrName';
 
