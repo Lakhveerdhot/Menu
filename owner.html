@@ -15,10 +15,14 @@
       </div>
       <div class="header-right">
         <div class="secret-row">
-          <label for="adminSecret">Secret:</label>
-          <input id="adminSecret" type="password" class="secret-input" placeholder="Enter admin/staff secret" aria-label="admin secret">
-          <label class="show-secret"><input id="showSecret" type="checkbox"> Show</label>
-          <label class="remember"><input id="rememberSecret" type="checkbox"> Keep logged in</label>
+          <div class="secret-input-group">
+            <label for="adminSecret">Secret:</label>
+            <input id="adminSecret" type="password" class="secret-input" placeholder="Enter admin/staff secret" aria-label="admin secret">
+          </div>
+          <div class="secret-options">
+            <label class="show-secret"><input id="showSecret" type="checkbox"> Show</label>
+            <label class="remember"><input id="rememberSecret" type="checkbox"> Keep logged in</label>
+          </div>
           <button id="loadBtn" class="btn large">Login</button>
         </div>
       </div>
