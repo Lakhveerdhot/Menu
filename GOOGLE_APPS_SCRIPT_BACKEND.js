@@ -1056,6 +1056,12 @@ function adminToggleAvailability(data) {
   } catch (e) { return { success: false, error: e.toString() }; }
 }
 
+function adminWhoAmI(data) {
+  const auth = resolveRole(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  return { success: true, role: auth.role };
+}
+
 // Invalidate menu cache by matching the dynamic cache key used in getMenu()
 function invalidateMenuCache(sheet) {
   try {
