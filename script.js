@@ -91,9 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMenu();
     });
 
-    document.getElementById('filterBtn').addEventListener('click', toggleFilter);
-    document.getElementById('applyBtn').addEventListener('click', applyFilters);
-    document.getElementById('resetBtn').addEventListener('click', resetFilters);
 
     const urlParams = new URLSearchParams(window.location.search);
     const addMore = urlParams.get('addMore');
@@ -218,79 +215,6 @@ function renderCategories() {
     document.getElementById('categoryFilter').innerHTML = filterHtml;
 }
 
-function populateCuisines() {
-    if (!menuItems.length) return;
-    const uniqueCats = [...new Set(menuItems.map(item => item.category))];
-    const html = uniqueCats.map(cat => `
-        <label class="checkbox-label">
-            <input type="checkbox" class="cuisine-checkbox" value="${cat}">
-            ${cat}
-        </label>
-    `).join('');
-    document.getElementById('cuisines').innerHTML = html;
-}
-
-function toggleFilter() {
-    const sidebar = document.getElementById('filterSidebar');
-    const overlay = document.getElementById('overlay');
-    if (!sidebar || !overlay) {
-        console.error('Filter sidebar or overlay not found');
-        return;
-    }
-    sidebar.classList.toggle('active');
-    overlay.classList.toggle('active');
-    if (sidebar.classList.contains('active')) {
-        populateCuisines();
-        document.querySelector(`input[name="sortBy"][value="${sortBy}"]`).checked = true;
-        priceRange.forEach(range => {
-            const chk = document.querySelector(`input[name="priceRange"][value="${range}"]`);
-            if (chk) chk.checked = true;
-        });
-        vegNonVeg.forEach(type => {
-            const chk = document.querySelector(`input[name="vegNonVeg"][value="${type}"]`);
-            if (chk) chk.checked = true;
-        });
-        document.getElementById('hasOffers').checked = hasOffersFilter;
-        document.getElementById('highRating').checked = highRating;
-        selectedCuisines.forEach(cat => {
-            const chk = document.querySelector(`.cuisine-checkbox[value="${cat}"]`);
-            if (chk) chk.checked = true;
-        });
-    }
-}
-
-function applyFilters() {
-    const sortRadios = document.querySelectorAll('input[name="sortBy"]:checked');
-    sortBy = sortRadios.length ? sortRadios[0].value : 'relevance';
-    selectedCuisines = Array.from(document.querySelectorAll('.cuisine-checkbox:checked')).map(chk => chk.value);
-    priceRange = Array.from(document.querySelectorAll('input[name="priceRange"]:checked')).map(chk => chk.value);
-    vegNonVeg = Array.from(document.querySelectorAll('input[name="vegNonVeg"]:checked')).map(chk => chk.value);
-    hasOffersFilter = document.getElementById('hasOffers').checked;
-    highRating = document.getElementById('highRating').checked;
-    if (selectedCuisines.length > 0) {
-        selectedCategory = selectedCuisines.length > 1 ? 'All' : selectedCuisines[0];
-    } else {
-        selectedCategory = 'All';
-    }
-    renderCategories();
-    renderMenu();
-    toggleFilter();
-}
-
-function resetFilters() {
-    sortBy = 'relevance';
-    selectedCuisines = [];
-    priceRange = [];
-    vegNonVeg = [];
-    hasOffersFilter = false;
-    highRating = false;
-    document.querySelectorAll('input[type="checkbox"]').forEach(inp => inp.checked = false);
-    document.querySelectorAll('input[type="radio"]').forEach(inp => inp.checked = false);
-    document.querySelector('input[name="sortBy"][value="relevance"]').checked = true;
-    selectedCategory = 'All';
-    renderCategories();
-    renderMenu();
-}
 
 function filterByCategory(category) {
     selectedCategory = category;

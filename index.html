@@ -33,7 +33,6 @@
             <div class="menu-header">
                 <h2>Our Menu</h2>
                 <div class="header-actions">
-                    <button id="filterBtn" class="filter-btn" onclick="toggleFilter()">Filter 🔍</button>
                     <button class="view-order-btn" onclick="showViewOrder()">📋 View My Orders</button>
                 </div>
             </div>
@@ -75,83 +74,6 @@
             </div>
         </div>
 
-        <!-- Filter Sidebar -->
-        <div class="filter-sidebar" id="filterSidebar">
-            <div class="filter-header">
-                <h2>Filters & Sort</h2>
-                <button class="close-filter" onclick="toggleFilter()">✕</button>
-            </div>
-
-            <div class="filter-content">
-                <div class="sort-section">
-                    <h3>Sort by</h3>
-                    <label class="radio-label">
-                        <input type="radio" name="sortBy" value="relevance" checked>
-                        Relevance (Default)
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="sortBy" value="price-low">
-                        Price: Low to High
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="sortBy" value="price-high">
-                        Price: High to Low
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="sortBy" value="rating">
-                        Rating: High to Low
-                    </label>
-                </div>
-                <div class="filter-section">
-                    <h3>Cuisines</h3>
-                    <div id="cuisines" class="checkbox-group"></div>
-                    <h3>Price Range</h3>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="priceRange" value="low">
-                            <₹200
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="priceRange" value="medium">
-                            ₹200 - ₹500
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="priceRange" value="high">
-                            >₹500
-                        </label>
-                    </div>
-                    <h3>Veg/Non-Veg</h3>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="vegNonVeg" value="veg">
-                            Veg
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="vegNonVeg" value="non-veg">
-                            Non-Veg
-                        </label>
-                    </div>
-                    <h3>Offers</h3>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="hasOffers">
-                            Has Offers
-                        </label>
-                    </div>
-                    <h3>Ratings</h3>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="highRating">
-                            4+ Stars
-                        </label>
-                    </div>
-                </div>
-                <div class="filter-actions">
-                    <button id="resetBtn" class="reset-filter-btn">Reset</button>
-                    <button id="applyBtn" class="apply-filter-btn">Apply Filters</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Checkout Modal -->
         <div class="modal" id="checkoutModal">
