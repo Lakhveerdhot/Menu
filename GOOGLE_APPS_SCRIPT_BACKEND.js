@@ -91,6 +91,8 @@ function doPost(e) {
 
       case 'admin-whoami':
         return jsonResponse(adminWhoAmI(data));
+      case 'admin-today-orders':
+        return jsonResponse(adminTodayOrders(data));
 
       case 'admin-add-item':
         return jsonResponse(adminAddItem(data));
@@ -1060,6 +1062,40 @@ function adminWhoAmI(data) {
   const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
   return { success: true, role: auth.role };
+}
+
+function adminTodayOrders(data) {
+  const auth = resolveRole(data.adminSecret);
+  if (!auth.ok) return { success: false, error: auth.error };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = ss.getSheets().filter(s => s.getName().startsWith(CONFIG.ORDERS_SHEET_NAME));
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const orders = [];
+    for (let sheet of sheets) {
+      const rows = sheet.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const ts = parseTimestamp(r[0]);
+        if (ts >= start) {
+          orders.push({
+            row: i+1,
+            sheetName: sheet.getName(),
+            orderId: r[1],
+            table: r[2],
+            customer: r[3],
+            mobile: r[4],
+            email: r[5],
+            items: parseItemsFromSheet(r[6]),
+            total: parseFloat(String(r[7]).replace(/[^0-9.-]+/g,'')) || 0,
+            timestamp: Utilities.formatDate(ts, 'Asia/Kolkata', 'dd/MM/yyyy, hh:mm:ss a')
+          });
+        }
+      }
+    }
+    return { success: true, data: orders, count: orders.length };
+  } catch (e) { return { success: false, error: e.toString() }; }
 }
 
 // Invalidate menu cache by matching the dynamic cache key used in getMenu()

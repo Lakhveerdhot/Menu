@@ -45,7 +45,20 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
 
     const res = await callAdmin('admin-list-menu');
     if (!res.success) return showMessage('Failed to load: ' + res.error);
+    // show controls
+    document.getElementById('ownerControls').style.display = 'block';
     renderOwnerList(res.data, role);
+
+    // load today's orders for staff/admin
+    const ord = await callAdmin('admin-today-orders');
+    if (ord.success) {
+      renderOrders(ord.data);
+      document.getElementById('stat-orders-today').textContent = ord.count || ord.data.length || 0;
+      // simple revenue calculation
+      const revenue = ord.data.reduce((s,o)=>s+(o.total||0),0);
+      document.getElementById('stat-revenue').textContent = '₹' + revenue.toFixed(2);
+      document.getElementById('stat-clients').textContent = ord.count || ord.data.length || 0;
+    }
   } catch (e) { showMessage('Error', e); }
 });
 
@@ -126,3 +139,26 @@ document.getElementById('addItemBtn').addEventListener('click', async () => {
   showMessage('Added');
   document.getElementById('loadBtn').click();
 });
+
+function renderOrders(orders) {
+  const tbody = document.querySelector('#ordersTable tbody');
+  tbody.innerHTML = '';
+  orders.forEach((o, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${o.orderId}</td>
+      <td>${o.timestamp}</td>
+      <td>${o.customer} (${o.mobile})</td>
+      <td>${o.items.map(it=>`${it.name} x${it.quantity}`).join('<br>')}</td>
+      <td>₹${(o.total||0).toFixed(2)}</td>
+      <td><button class="btn small" data-id="${o.orderId}">View</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  // update menus stat count too
+  // simple count of menu items
+  const menusCountEl = document.getElementById('stat-menus');
+  const list = document.getElementById('ownerList');
+  menusCountEl.textContent = list.children.length || '--';
+}

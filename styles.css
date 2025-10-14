@@ -425,6 +425,22 @@ body.modal-open {
 .btn.red { background: #e74c3c; color: white; }
 .btn.small:hover { transform: translateY(-2px); }
 
+/* Dashboard layout */
+.dashboard-main { padding: 24px; }
+.stats-row { display:flex; gap:16px; margin-bottom:20px; }
+.stat-card { flex:1; padding:18px; border-radius:12px; background: linear-gradient(180deg,#fff,#fbfbfb); box-shadow: var(--shadow); }
+.stat-value { font-size:1.6em; font-weight:800; color:var(--dark-color); }
+.stat-label { color:#7f8c8d; }
+.content-row { display:flex; gap:20px; }
+.orders-panel { flex:2; }
+.menu-panel { flex:1; }
+.panel { background:white; border-radius:12px; padding:12px; box-shadow: var(--shadow); }
+.panel-header { font-weight:700; margin-bottom:8px; }
+.orders-table { width:100%; border-collapse:collapse; }
+.orders-table th, .orders-table td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; }
+.add-form { display:flex; flex-direction:column; gap:8px; }
+
+
 
 .order-bar .qty-btn.minus {
     background: rgba(255,255,255,0.18);

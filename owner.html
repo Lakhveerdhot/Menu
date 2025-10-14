@@ -7,33 +7,68 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
+  <div class="container dashboard">
     <header class="header">
-      <h1>Owner Dashboard</h1>
-      <p class="tagline">Manage Menu Items</p>
+      <div class="header-left">
+        <h1>Owner Dashboard</h1>
+        <p class="tagline">Control panel for admins and staff</p>
+      </div>
+      <div class="header-right">
+        <label>Secret: <input id="adminSecret" type="password" placeholder="Enter admin/staff secret"></label>
+        <button id="loadBtn" class="btn small">Login</button>
+      </div>
     </header>
 
-    <main style="padding:20px;">
-      <div style="margin-bottom:10px;">
-        <label>Admin Secret: <input id="adminSecret" type="password" style="width:300px;"></label>
-        <button id="loadBtn">Load Menu</button>
-      </div>
-
-      <div id="ownerControls" style="display:none;">
-        <h3>Menu Items</h3>
-        <div id="ownerList"></div>
-
-        <h3>Add New Item</h3>
-        <div style="display:flex;flex-direction:column;gap:8px;max-width:600px;">
-          <input id="newName" placeholder="Name">
-          <input id="newCategory" placeholder="Category">
-          <input id="newPrice" placeholder="Price" type="number">
-          <input id="newImage" placeholder="Image URL">
-          <textarea id="newDescription" placeholder="Description"></textarea>
-          <label><input type="checkbox" id="newAvailable" checked> Available</label>
-          <button id="addItemBtn">Add Item</button>
+    <main class="dashboard-main">
+      <section class="stats-row">
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-menus">--</div>
+          <div class="stat-label">Total Menus</div>
         </div>
-      </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-orders-today">--</div>
+          <div class="stat-label">Orders Today</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-clients">--</div>
+          <div class="stat-label">Clients Today</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-revenue">--</div>
+          <div class="stat-label">Revenue Today</div>
+        </div>
+      </section>
+
+      <section class="content-row">
+        <div class="panel orders-panel">
+          <div class="panel-header">Orders Today</div>
+          <div class="panel-body">
+            <table id="ordersTable" class="orders-table">
+              <thead><tr><th>#</th><th>Order ID</th><th>Time</th><th>Customer</th><th>Items</th><th>Total</th><th>Action</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel menu-panel">
+          <div class="panel-header">Menu Management</div>
+          <div class="panel-body">
+            <div id="ownerControls" style="display:none;">
+              <div id="ownerList"></div>
+              <h4>Add New Item</h4>
+              <div class="add-form">
+                <input id="newName" placeholder="Name">
+                <input id="newCategory" placeholder="Category">
+                <input id="newPrice" placeholder="Price" type="number">
+                <input id="newImage" placeholder="Image URL">
+                <textarea id="newDescription" placeholder="Description"></textarea>
+                <label><input type="checkbox" id="newAvailable" checked> Available</label>
+                <button id="addItemBtn" class="btn small">Add Item</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
