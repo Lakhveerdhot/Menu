@@ -132,54 +132,35 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 // Populate category dropdown with existing categories
+let existingCategories = [];
+
 function populateCategoryDropdown(items) {
-  const categories = [...new Set(items.map(item => item.category))].sort();
-  const select = document.getElementById('categorySelect');
-  select.innerHTML = '<option value="new">+ New Category</option>';
-  categories.forEach(cat => {
-    const option = document.createElement('option');
-    option.value = cat;
-    option.textContent = cat;
-    select.appendChild(option);
-  });
+  existingCategories = [...new Set(items.map(item => item.category))].sort();
+  renderCategoryDropdown();
 }
 
-// Handle category selection
-document.getElementById('categorySelect').addEventListener('change', (e) => {
-  const newCategoryInput = document.getElementById('newCategory');
-  const editBtn = document.getElementById('editCategoryBtn');
-  
-  if (e.target.value === 'new') {
-    newCategoryInput.style.display = 'block';
-    newCategoryInput.value = '';
-    newCategoryInput.readOnly = false;
-    editBtn.style.display = 'none';
-  } else {
-    newCategoryInput.style.display = 'block';
-    newCategoryInput.value = e.target.value;
-    newCategoryInput.readOnly = true;
-    editBtn.style.display = 'block';
-  }
+function renderCategoryDropdown() {
+  const dropdown = document.getElementById('categoryDropdown');
+  dropdown.innerHTML = existingCategories.map(cat => 
+    `<div class="category-dropdown-item" data-category="${cat}">${cat}</div>`
+  ).join('');
+}
+
+// Toggle category dropdown
+document.getElementById('categoryDropdownBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const dropdown = document.getElementById('categoryDropdown');
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 });
 
-// Handle edit category button
-document.getElementById('editCategoryBtn').addEventListener('click', () => {
-  const newCategoryInput = document.getElementById('newCategory');
-  const editBtn = document.getElementById('editCategoryBtn');
-  
-  if (newCategoryInput.readOnly) {
-    // Enable editing
-    newCategoryInput.readOnly = false;
-    newCategoryInput.focus();
-    newCategoryInput.select();
-    editBtn.textContent = '✓ Save';
-    editBtn.style.background = '#27ae60';
-  } else {
-    // Save and lock
-    newCategoryInput.readOnly = true;
-    editBtn.textContent = '✏️ Edit Category Name';
-    editBtn.style.background = '';
-    showMessage('Category name updated! You can now add the item.');
+// Handle category selection from dropdown
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('category-dropdown-item')) {
+    const category = e.target.getAttribute('data-category');
+    document.getElementById('newCategory').value = category;
+    document.getElementById('categoryDropdown').style.display = 'none';
+  } else if (!e.target.closest('.category-input-wrapper')) {
+    document.getElementById('categoryDropdown').style.display = 'none';
   }
 });
 

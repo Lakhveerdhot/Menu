@@ -77,12 +77,10 @@
             <div id="addItemControls" style="display:none;">
               <div class="add-form">
                 <input id="newName" placeholder="Name">
-                <div class="category-select-group">
-                  <select id="categorySelect" class="category-select">
-                    <option value="new">+ New Category</option>
-                  </select>
-                  <input id="newCategory" placeholder="Enter category name" style="display:none;">
-                  <button id="editCategoryBtn" class="btn small" style="display:none;">✏️ Edit Category Name</button>
+                <div class="category-input-wrapper">
+                  <input id="newCategory" placeholder="Category" type="text">
+                  <button id="categoryDropdownBtn" class="category-dropdown-btn" type="button">▼</button>
+                  <div id="categoryDropdown" class="category-dropdown-menu" style="display:none;"></div>
                 </div>
                 <input id="newPrice" placeholder="Price" type="number">
                 <input id="newImage" placeholder="Image URL">
