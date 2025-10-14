@@ -59,6 +59,8 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
     if (!identity.success) return showMessage('Auth failed: ' + identity.error);
     const role = identity.role || 'staff';
     document.getElementById('ownerControls').style.display = 'block';
+    document.getElementById('addItemControls').style.display = 'block';
+    document.getElementById('menuManagementBtn').style.display = 'block';
     document.getElementById('roleDisplay')?.remove();
     const hdr = document.createElement('div');
     hdr.id = 'roleDisplay';
@@ -196,3 +198,19 @@ function renderOrders(orders) {
   const list = document.getElementById('ownerList');
   menusCountEl.textContent = list.children.length || '--';
 }
+
+// Menu Management Modal handlers
+document.getElementById('menuManagementBtn').addEventListener('click', () => {
+  document.getElementById('menuManagementModal').style.display = 'flex';
+});
+
+document.getElementById('closeMenuModal').addEventListener('click', () => {
+  document.getElementById('menuManagementModal').style.display = 'none';
+});
+
+// Close modal when clicking outside
+document.getElementById('menuManagementModal').addEventListener('click', (e) => {
+  if (e.target.id === 'menuManagementModal') {
+    document.getElementById('menuManagementModal').style.display = 'none';
+  }
+});

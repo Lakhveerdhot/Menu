@@ -45,6 +45,12 @@
       </section>
 
       <section class="content-row">
+        <div class="panel menu-button-panel">
+          <button id="menuManagementBtn" class="btn large menu-mgmt-btn" style="display:none;">
+            Menu Management
+          </button>
+        </div>
+
         <div class="panel orders-panel">
           <div class="panel-header">Orders Today</div>
           <div class="panel-body">
@@ -55,12 +61,10 @@
           </div>
         </div>
 
-        <div class="panel menu-panel">
-          <div class="panel-header">Menu Management</div>
+        <div class="panel add-item-panel">
+          <div class="panel-header">Add New Item</div>
           <div class="panel-body">
-            <div id="ownerControls" style="display:none;">
-              <div id="ownerList"></div>
-              <h4>Add New Item</h4>
+            <div id="addItemControls" style="display:none;">
               <div class="add-form">
                 <input id="newName" placeholder="Name">
                 <input id="newCategory" placeholder="Category">
@@ -74,10 +78,24 @@
           </div>
         </div>
       </section>
+
+      <!-- Menu Management Modal -->
+      <div id="menuManagementModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Menu Management</h2>
+            <button id="closeMenuModal" class="btn-close"> </button>
+          </div>
+          <div class="modal-body">
+            <div id="ownerControls" style="display:none;">
+              <div id="ownerList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
   <script src="config.js"></script>
   <script src="owner.js"></script>
-</body>
 </html>
