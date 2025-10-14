@@ -53,11 +53,21 @@ document.getElementById('showSecret').addEventListener('change', (e) => { docume
 // main login handler
 document.getElementById('loadBtn').addEventListener('click', async () => {
   try {
+  showProcessing(true);
   const secretVal = document.getElementById('adminSecret').value;
   setSecret(secretVal);
   const identity = await whoAmI();
-    if (!identity.success) return showMessage('Auth failed: ' + identity.error);
+    if (!identity.success) {
+      showProcessing(false);
+      return showMessage('Auth failed: ' + identity.error);
+    }
     const role = identity.role || 'staff';
+    
+    // Hide login section, show logout section
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('loggedInSection').style.display = 'block';
+    document.getElementById('userRoleDisplay').textContent = `Logged in as: ${role.toUpperCase()}`;
+    
     document.getElementById('ownerControls').style.display = 'block';
     document.getElementById('addItemControls').style.display = 'block';
     document.getElementById('menuManagementBtn').style.display = 'block';
@@ -70,9 +80,14 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
 
     // fetch menu and orders in parallel for speed
     const [menuRes, ord] = await Promise.all([callAdmin('admin-list-menu'), callAdmin('admin-today-orders')]);
-    if (!menuRes.success) return showMessage('Failed to load menu: ' + menuRes.error);
+    if (!menuRes.success) {
+      showProcessing(false);
+      return showMessage('Failed to load menu: ' + menuRes.error);
+    }
     document.getElementById('ownerControls').style.display = 'block';
     renderOwnerList(menuRes.data, role);
+    populateCategoryDropdown(menuRes.data);
+    showProcessing(false);
     if (ord.success) {
       renderOrders(ord.data);
       document.getElementById('stat-orders-today').textContent = ord.count || ord.data.length || 0;
@@ -95,8 +110,64 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
         }
       } catch (e) { console.warn('poll error', e); }
     }, 10000);
-  } catch (e) { showMessage('Error', e); }
+  } catch (e) { 
+    showProcessing(false);
+    showMessage('Error', e); 
+  }
 });
+
+// Logout handler
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  if (confirm('Are you sure you want to logout?')) {
+    sessionStorage.removeItem('ownerSecret');
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('loggedInSection').style.display = 'none';
+    document.getElementById('ownerControls').style.display = 'none';
+    document.getElementById('addItemControls').style.display = 'none';
+    document.getElementById('menuManagementBtn').style.display = 'none';
+    document.getElementById('adminSecret').value = '';
+    if (window._orderPoll) clearInterval(window._orderPoll);
+    location.reload();
+  }
+});
+
+// Populate category dropdown with existing categories
+function populateCategoryDropdown(items) {
+  const categories = [...new Set(items.map(item => item.category))].sort();
+  const select = document.getElementById('categorySelect');
+  select.innerHTML = '<option value="new">+ New Category</option>';
+  categories.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat;
+    select.appendChild(option);
+  });
+}
+
+// Handle category selection
+document.getElementById('categorySelect').addEventListener('change', (e) => {
+  const newCategoryInput = document.getElementById('newCategory');
+  if (e.target.value === 'new') {
+    newCategoryInput.style.display = 'block';
+    newCategoryInput.value = '';
+  } else {
+    newCategoryInput.style.display = 'none';
+    newCategoryInput.value = e.target.value;
+  }
+});
+
+// Processing spinner functions
+function showProcessing(show) {
+  let spinner = document.getElementById('processingSpinner');
+  if (!spinner) {
+    spinner = document.createElement('div');
+    spinner.id = 'processingSpinner';
+    spinner.className = 'processing-spinner';
+    spinner.innerHTML = '<div class="spinner-content"><div class="spinner"></div><p>Processing...</p></div>';
+    document.body.appendChild(spinner);
+  }
+  spinner.style.display = show ? 'flex' : 'none';
+}
 
 function renderOwnerList(items, role) {
   const container = document.getElementById('ownerList');
@@ -162,15 +233,22 @@ function renderOwnerList(items, role) {
 }
 
 document.getElementById('addItemBtn').addEventListener('click', async () => {
+  showProcessing(true);
+  const categoryValue = document.getElementById('newCategory').value;
+  if (!categoryValue) {
+    showProcessing(false);
+    return showMessage('Please select or enter a category');
+  }
   const item = {
     name: document.getElementById('newName').value,
-    category: document.getElementById('newCategory').value,
+    category: categoryValue,
     price: Number(document.getElementById('newPrice').value) || 0,
     image: document.getElementById('newImage').value,
     description: document.getElementById('newDescription').value,
     available: document.getElementById('newAvailable').checked
   };
   const res = await callAdmin('admin-add-item', { item });
+  showProcessing(false);
   if (!res.success) return showMessage('Failed: ' + res.error);
   showMessage('Added');
   document.getElementById('loadBtn').click();

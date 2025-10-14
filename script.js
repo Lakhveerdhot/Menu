@@ -117,11 +117,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Processing spinner functions
+function showProcessing(show) {
+    let spinner = document.getElementById('processingSpinner');
+    if (!spinner) {
+        spinner = document.createElement('div');
+        spinner.id = 'processingSpinner';
+        spinner.className = 'processing-spinner';
+        spinner.innerHTML = '<div class="spinner-content"><div class="spinner"></div><p>Processing...</p></div>';
+        document.body.appendChild(spinner);
+    }
+    spinner.style.display = show ? 'flex' : 'none';
+}
+
 // Load restaurant info
 async function loadRestaurantInfo() {
     try {
+        showProcessing(true);
         const response = await fetch(`${API_BASE_URL}?path=restaurant-info`);
         const data = await response.json();
+        showProcessing(false);
         if (data.success) {
             document.getElementById('restaurantName').textContent = data.data.name;
             document.getElementById('restaurantTagline').textContent = data.data.tagline;
@@ -135,6 +150,7 @@ async function loadRestaurantInfo() {
 // Load menu from API
 async function loadMenu() {
     try {
+        showProcessing(true);
         console.log('Fetching menu from:', `${API_BASE_URL}?path=menu`);
         const cached = localStorage.getItem('menu_cache_v1');
         if (cached) {
@@ -145,6 +161,7 @@ async function loadMenu() {
                 renderMenu();
                 document.getElementById('menuLoading').style.display = 'none';
                 document.getElementById('categoryFilter').style.display = 'flex';
+                showProcessing(false);
             } catch (e) {
                 console.warn('Failed to parse cached menu:', e);
             }
@@ -166,8 +183,10 @@ async function loadMenu() {
             }
             renderCategories();
             renderMenu();
+            showProcessing(false);
         } else {
             console.error('Menu load failed:', data.error);
+            showProcessing(false);
             menuItems = [
                 { id: 1, name: 'Veg Biryani', category: 'Indian', price: 150, description: 'Spicy veg biryani', rating: 4.5, hasOffers: true, isVeg: true },
                 { id: 2, name: 'Chicken Biryani', category: 'Indian', price: 250, description: 'Non-veg biryani', rating: 4.2, hasOffers: false, isVeg: false },
@@ -201,6 +220,7 @@ async function loadMenu() {
         document.getElementById('categoryFilter').style.display = 'flex';
         renderCategories();
         renderMenu();
+        showProcessing(false);
     }
 }
 
@@ -478,6 +498,7 @@ function closeCheckout() {
 // Place order
 async function placeOrder(event) {
     event.preventDefault();
+    showProcessing(true);
     
     const tableNumber = document.getElementById('tableNumber').value;
     const customerName = document.getElementById('customerName').value;
@@ -543,114 +564,28 @@ async function placeOrder(event) {
             alert('❌ Error placing order. Please check your connection and try again.');
         }
     } finally {
-        placeOrderBtn.disabled = false;
-        placeOrderBtn.textContent = 'Place Order';
+        document.getElementById('placeOrderBtn').disabled = false;
+        document.getElementById('placeOrderBtn').textContent = 'Place Order';
+        showProcessing(false);
     }
 }
 
 // Close success modal
 function closeSuccess() {
-    document.getElementById('successModal').classList.remove('active');
-    document.getElementById('overlay').classList.remove('active');
-    document.body.classList.remove('modal-open');
-}
-
-// Close all modals
-function closeAll() {
-    document.getElementById('cartSidebar').classList.remove('active');
-    document.getElementById('checkoutModal').classList.remove('active');
-    document.getElementById('successModal').classList.remove('active');
-    document.getElementById('overlay').classList.remove('active');
-}
-
-// Show notification
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #27ae60;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 2000);
-}
-
-// View Order Functions
-function showViewOrder() {
-    const modal = document.getElementById('viewOrderModal');
-    const overlay = document.getElementById('overlay');
-
-    document.getElementById('searchSection').style.display = 'block';
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('errorMessage').classList.remove('active');
-    document.getElementById('ordersListSection').style.display = 'none';
-    document.getElementById('orderDetailsSection').classList.remove('active');
-
-    document.getElementById('mobileInput').value = '';
-    document.getElementById('orderIdInput').value = '';
-
-    modal.classList.add('active');
-    overlay.classList.add('active');
-}
-
-function closeViewOrder() {
-    document.getElementById('viewOrderModal').classList.remove('active');
-    document.getElementById('overlay').classList.remove('active');
-}
-
-async function searchOrder() {
-    const mobile = document.getElementById('mobileInput').value.trim();
-    const orderId = document.getElementById('orderIdInput').value.trim();
-
-    if (!mobile && !orderId) {
-        alert('Please enter either mobile number or order ID');
-        return;
-    }
-
-    document.getElementById('searchSection').style.display = 'none';
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('errorMessage').classList.remove('active');
-
-    try {
-        let queryParams = '';
-        if (mobile) queryParams = `mobile=${encodeURIComponent(mobile)}`;
-        if (orderId) queryParams = `orderId=${encodeURIComponent(orderId)}`;
-
-        const response = await fetch(`${API_BASE_URL}?path=orders&${queryParams}`);
-        const data = await response.json();
-
-        if (data.success && data.data && data.data.length > 0) {
-            const orders = data.data;
-
-            if (orders.length === 1) {
-                displayOrderDetails(orders[0]);
-            } else {
-                displayOrdersList(orders);
-            }
-        } else {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('errorMessage').classList.add('active');
+{{ ... }}
+            document.getElementById('errorMessage').style.display = 'block';
         }
     } catch (error) {
         console.error('Error searching orders:', error);
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('errorMessage').classList.add('active');
+        document.getElementById('errorMessage').style.display = 'block';
+        showProcessing(false);
     }
 }
 
 function displayOrdersList(orders) {
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('ordersListSection').style.display = 'block';
+{{ ... }}
 
     const ordersHtml = orders.map(order => {
         const statusClass = getStatusClass(order.status);

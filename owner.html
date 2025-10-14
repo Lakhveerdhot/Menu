@@ -14,7 +14,7 @@
         <p class="tagline">Control panel for admins and staff</p>
       </div>
       <div class="header-right">
-        <div class="secret-row">
+        <div class="secret-row" id="loginSection">
           <div class="secret-input-group">
             <label for="adminSecret">Secret:</label>
             <input id="adminSecret" type="password" class="secret-input" placeholder="Enter admin/staff secret" aria-label="admin secret">
@@ -24,6 +24,12 @@
             <label class="remember"><input id="rememberSecret" type="checkbox"> Keep logged in</label>
           </div>
           <button id="loadBtn" class="btn large">Login</button>
+        </div>
+        <div id="loggedInSection" style="display:none;">
+          <div style="text-align:center; margin-bottom:10px;">
+            <span id="userRoleDisplay" style="font-weight:700; color:#fff; font-size:1.1em;"></span>
+          </div>
+          <button id="logoutBtn" class="btn large logout-btn">Logout</button>
         </div>
       </div>
     </header>
@@ -71,7 +77,12 @@
             <div id="addItemControls" style="display:none;">
               <div class="add-form">
                 <input id="newName" placeholder="Name">
-                <input id="newCategory" placeholder="Category">
+                <div class="category-select-group">
+                  <select id="categorySelect" class="category-select">
+                    <option value="new">+ New Category</option>
+                  </select>
+                  <input id="newCategory" placeholder="Enter new category name" style="display:none;">
+                </div>
                 <input id="newPrice" placeholder="Price" type="number">
                 <input id="newImage" placeholder="Image URL">
                 <textarea id="newDescription" placeholder="Description"></textarea>
