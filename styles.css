@@ -437,8 +437,14 @@ body.modal-open {
     .header-right { margin-top:12px; }
     .secret-input { width:140px; }
     .dashboard-main { padding:12px; }
-    .orders-table { font-size:0.85em; }
-    .orders-table th, .orders-table td { padding:6px 4px; }
+    .orders-table { font-size:0.75em; min-width:500px; }
+    .orders-table th, .orders-table td { padding:6px 4px; font-size:0.9em; }
+    .panel { padding:8px; }
+    .panel-header { font-size:0.95em; }
+    .stat-card { padding:12px; }
+    .stat-value { font-size:1.3em; }
+    .menu-button-panel { padding:12px; }
+    .menu-mgmt-btn { padding:12px 20px; font-size:1em; }
 }
 
 /* Dashboard layout */
@@ -451,11 +457,12 @@ body.modal-open {
 .menu-button-panel { width:100%; text-align:center; padding:20px; }
 .menu-mgmt-btn { width:100%; max-width:400px; padding:16px 24px; font-size:1.1em; background:var(--primary-color); color:white; }
 .orders-panel { flex:1; width:100%; }
+.orders-panel .panel-body { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .add-item-panel { flex:1; width:100%; }
 .panel { background:white; border-radius:12px; padding:12px; box-shadow: var(--shadow); }
 .panel-header { font-weight:700; margin-bottom:8px; }
-.orders-table { width:100%; border-collapse:collapse; }
-.orders-table th, .orders-table td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; }
+.orders-table { width:100%; border-collapse:collapse; min-width:600px; }
+.orders-table th, .orders-table td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; white-space:nowrap; }
 .add-form { display:flex; flex-direction:column; gap:8px; }
 
 /* Menu Management Modal */
