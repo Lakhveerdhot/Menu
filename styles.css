@@ -397,12 +397,41 @@ body.modal-open {
     transform: scale(1.05);
 }
 
+/* Owner dashboard styles */
+.owner-item {
+    border: 1px solid var(--light-color);
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    display: block;
+    background: linear-gradient(180deg, #ffffff, #fbfbfb);
+}
+.owner-item-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+.owner-item-left { flex: 1; }
+.owner-item-right { width: 220px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+.owner-item-name { font-size: 1.1em; color: var(--dark-color); }
+.owner-item-cat { font-size: 0.85em; color: #7f8c8d; }
+.owner-item-desc { font-size: 0.95em; color: #6c757d; }
+.owner-item-price { font-weight: 700; color: var(--primary-color); }
+.owner-item-available { font-size: 0.9em; color: #444; }
+.owner-item-actions { display:flex; gap:8px; }
+.btn { border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight:600; }
+.btn.small { padding:6px 10px; font-size:0.9em; }
+.btn.green { background: #27ae60; color: white; }
+.btn.red { background: #e74c3c; color: white; }
+.btn.small:hover { transform: translateY(-2px); }
+
+
 .order-bar .qty-btn.minus {
-    /* Specific styling for minus if needed */
+    background: rgba(255,255,255,0.18);
 }
 
 .order-bar .qty-btn.plus {
-    /* Specific styling for plus if needed */
+    background: rgba(255,255,255,0.18);
 }
 
 .order-bar .qty-display {

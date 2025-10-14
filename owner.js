@@ -2,6 +2,8 @@
 const API = window.API_BASE_URL || '';
 
 function showMessage(msg, err) {
+  if (err) console.error(err);
+  // nicer toast-like alert
   alert(msg + (err ? '\n' + JSON.stringify(err) : ''));
 }
 
@@ -18,56 +20,95 @@ async function callAdmin(action, body) {
   return resp.json();
 }
 
+// Detect role by calling admin-whoami
+async function whoAmI() {
+  try {
+    const res = await callAdmin('admin-whoami');
+    return res;
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 document.getElementById('loadBtn').addEventListener('click', async () => {
   try {
+    const identity = await whoAmI();
+    if (!identity.success) return showMessage('Auth failed: ' + identity.error);
+    const role = identity.role || 'staff';
+    document.getElementById('ownerControls').style.display = 'block';
+    document.getElementById('roleDisplay')?.remove();
+    const hdr = document.createElement('div');
+    hdr.id = 'roleDisplay';
+    hdr.style.marginBottom = '10px';
+    hdr.innerHTML = `<strong>Role:</strong> ${role.toUpperCase()}`;
+    document.getElementById('ownerControls').prepend(hdr);
+
     const res = await callAdmin('admin-list-menu');
     if (!res.success) return showMessage('Failed to load: ' + res.error);
-    document.getElementById('ownerControls').style.display = 'block';
-    renderOwnerList(res.data);
+    renderOwnerList(res.data, role);
   } catch (e) { showMessage('Error', e); }
 });
 
-function renderOwnerList(items) {
+function renderOwnerList(items, role) {
   const container = document.getElementById('ownerList');
   container.innerHTML = '';
   items.forEach(it => {
     const el = document.createElement('div');
-    el.style.border = '1px solid #eee';
-    el.style.padding = '10px';
-    el.style.marginBottom = '8px';
+    el.className = 'owner-item';
     el.innerHTML = `
-      <strong>${it.name}</strong> <em>(${it.category})</em>
-      <div>₹${it.price}</div>
-      <div>${it.description || ''}</div>
-      <div>Available: ${it.available ? 'yes' : 'no'}</div>
-      <button data-id="${it.id}" data-available="true" class="availBtn yes">Yes</button>
-      <button data-id="${it.id}" data-available="false" class="availBtn no">No</button>
-      <button data-id="${it.id}" class="deleteBtn">Delete</button>
+      <div class="owner-item-row">
+        <div class="owner-item-left">
+          <strong class="owner-item-name">${it.name}</strong>
+          <div class="owner-item-cat">${it.category}</div>
+          <div class="owner-item-desc">${it.description || ''}</div>
+        </div>
+        <div class="owner-item-right">
+          <div class="owner-item-price">₹${it.price}</div>
+          <div class="owner-item-available">Available: <span class="avail-val">${it.available ? 'yes' : 'no'}</span></div>
+          <div class="owner-item-actions"></div>
+        </div>
+      </div>
     `;
     container.appendChild(el);
-  });
 
-  container.querySelectorAll('.availBtn').forEach(b => {
-    b.addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
-      const available = e.target.dataset.available === 'true';
-      const res = await callAdmin('admin-toggle-availability', { id, available });
-      if (!res.success) return showMessage('Failed to update availability: ' + res.error);
-      showMessage('Availability updated: ' + (available ? 'yes' : 'no'));
-      // reload to reflect new state
+    const actions = el.querySelector('.owner-item-actions');
+    // Staff: only Yes/No
+    const yesBtn = document.createElement('button');
+    yesBtn.className = 'btn small green';
+    yesBtn.textContent = 'Yes';
+    yesBtn.addEventListener('click', async () => {
+      const res = await callAdmin('admin-toggle-availability', { id: it.id, available: true });
+      if (!res.success) return showMessage('Failed: ' + res.error);
+      showMessage('Set available: yes');
       document.getElementById('loadBtn').click();
     });
-  });
-
-  container.querySelectorAll('.deleteBtn').forEach(b => {
-    b.addEventListener('click', async (e) => {
-      if (!confirm('Delete item?')) return;
-      const id = e.target.dataset.id;
-      const res = await callAdmin('admin-delete-item', { id });
-      if (!res.success) return showMessage('Failed to delete: ' + res.error);
-      showMessage('Deleted');
+    const noBtn = document.createElement('button');
+    noBtn.className = 'btn small red';
+    noBtn.textContent = 'No';
+    noBtn.addEventListener('click', async () => {
+      // if admin we can optionally delete on No
+      const deleteOnNo = (role === 'admin');
+      const res = await callAdmin('admin-toggle-availability', { id: it.id, available: false, deleteOnNo: deleteOnNo });
+      if (!res.success) return showMessage('Failed: ' + res.error);
+      showMessage(deleteOnNo && res.deleted ? 'Deleted item' : 'Set available: no');
       document.getElementById('loadBtn').click();
     });
+    actions.appendChild(yesBtn);
+    actions.appendChild(noBtn);
+
+    if (role === 'admin') {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn small';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', async () => {
+        if (!confirm('Delete item?')) return;
+        const res = await callAdmin('admin-delete-item', { id: it.id });
+        if (!res.success) return showMessage('Failed: ' + res.error);
+        showMessage('Deleted');
+        document.getElementById('loadBtn').click();
+      });
+      actions.appendChild(delBtn);
+    }
   });
 }
 

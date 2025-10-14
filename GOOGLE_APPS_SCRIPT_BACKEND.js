@@ -17,9 +17,10 @@ const CONFIG = {
   CUSTOMER_EMAIL_ENABLED: true        // Send confirmation emails to customers
 };
 
-// Admin secret for owner dashboard (set to a strong value before deployment)
-// If you don't want an owner dashboard, leave it as 'DISABLED' or blank.
+// Admin and Staff secrets for owner dashboard (set to strong values before deployment)
+// If you don't want an owner dashboard, leave secrets as 'DISABLED' or blank.
 CONFIG.ADMIN_SECRET = CONFIG.ADMIN_SECRET || '852852';
+CONFIG.STAFF_SECRET = CONFIG.STAFF_SECRET || 'STAFF-0000';
 
 // Optional email queue configuration
 // EMAIL_QUEUE_SHEET_NAME: name of the sheet used to queue outbound emails
@@ -87,6 +88,9 @@ function doPost(e) {
       // Admin actions (require admin secret in request body: data.adminSecret)
       case 'admin-list-menu':
         return jsonResponse(adminListMenu(data));
+
+      case 'admin-whoami':
+        return jsonResponse(adminWhoAmI(data));
 
       case 'admin-add-item':
         return jsonResponse(adminAddItem(data));
@@ -866,11 +870,28 @@ function checkAdminSecret(provided) {
   if (!CONFIG.ADMIN_SECRET || CONFIG.ADMIN_SECRET === 'DISABLED') return { ok: false, error: 'Admin dashboard disabled' };
   if (!provided) return { ok: false, error: 'Missing adminSecret' };
   if (String(provided) !== String(CONFIG.ADMIN_SECRET)) return { ok: false, error: 'Invalid adminSecret' };
-  return { ok: true };
+  return { ok: true, role: 'admin' };
+}
+
+function checkStaffSecret(provided) {
+  if (!CONFIG.STAFF_SECRET || CONFIG.STAFF_SECRET === 'DISABLED') return { ok: false, error: 'Staff access disabled' };
+  if (!provided) return { ok: false, error: 'Missing adminSecret' };
+  if (String(provided) !== String(CONFIG.STAFF_SECRET)) return { ok: false, error: 'Invalid staff secret' };
+  return { ok: true, role: 'staff' };
+}
+
+function resolveRole(provided) {
+  // try admin first, then staff
+  const a = checkAdminSecret(provided);
+  if (a.ok) return a;
+  const s = checkStaffSecret(provided);
+  if (s.ok) return s;
+  // if both fail, prefer admin error message
+  return { ok: false, error: a.error };
 }
 
 function adminListMenu(data) {
-  const auth = checkAdminSecret(data.adminSecret);
+  const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
 
   // Reuse getMenu but bypass cache to get live data
@@ -909,15 +930,16 @@ function adminListMenu(data) {
         available: idx.available >=0 ? !!String(r[idx.available]).toLowerCase().match(/^(1|true|yes|y)/) : true
       });
     }
-    return { success: true, data: items };
+    return { success: true, data: items, role: auth.role };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
 }
 
 function adminAddItem(data) {
-  const auth = checkAdminSecret(data.adminSecret);
+  const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
+  if (auth.role !== 'admin') return { success: false, error: 'Staff cannot add items' };
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(CONFIG.MENU_SHEET_NAME);
@@ -942,8 +964,9 @@ function adminAddItem(data) {
 }
 
 function adminUpdateItem(data) {
-  const auth = checkAdminSecret(data.adminSecret);
+  const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
+  if (auth.role !== 'admin') return { success: false, error: 'Staff cannot update items' };
   if (!data.item || !data.item.id) return { success: false, error: 'Missing item.id' };
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -972,8 +995,9 @@ function adminUpdateItem(data) {
 }
 
 function adminDeleteItem(data) {
-  const auth = checkAdminSecret(data.adminSecret);
+  const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
+  if (auth.role !== 'admin') return { success: false, error: 'Staff cannot delete items' };
   if (!data.id) return { success: false, error: 'Missing id' };
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -994,7 +1018,7 @@ function adminDeleteItem(data) {
 }
 
 function adminToggleAvailability(data) {
-  const auth = checkAdminSecret(data.adminSecret);
+  const auth = resolveRole(data.adminSecret);
   if (!auth.ok) return { success: false, error: auth.error };
   if (!data.id) return { success: false, error: 'Missing id' };
   try {
@@ -1008,10 +1032,24 @@ function adminToggleAvailability(data) {
     if (availCol < 0) return { success: false, error: 'No available column in menu sheet' };
     for (let i=1;i<rows.length;i++){
       if (String(rows[i][idCol]) === String(data.id)){
+        // Staff may only toggle availability; admins may also optionally delete when setting no
         const newVal = (data.available === true) ? 'yes' : (data.available === false ? 'no' : (String(rows[i][availCol]) === 'yes' ? 'no' : 'yes'));
-        sheet.getRange(i+1, availCol+1).setValue(newVal);
-        try { invalidateMenuCache(sheet); } catch(e){}
-        return { success: true, available: newVal };
+        if (auth.role === 'staff') {
+          // staff: just set availability
+          sheet.getRange(i+1, availCol+1).setValue(newVal);
+          try { invalidateMenuCache(sheet); } catch(e){}
+          return { success: true, available: newVal };
+        } else {
+          // admin: if available=false and data.deleteOnNo === true then delete row
+          if (newVal === 'no' && data.deleteOnNo === true) {
+            sheet.deleteRow(i+1);
+            try { invalidateMenuCache(sheet); } catch(e){}
+            return { success: true, deleted: true };
+          }
+          sheet.getRange(i+1, availCol+1).setValue(newVal);
+          try { invalidateMenuCache(sheet); } catch(e){}
+          return { success: true, available: newVal };
+        }
       }
     }
     return { success: false, error: 'Item not found' };
