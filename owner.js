@@ -147,12 +147,39 @@ function populateCategoryDropdown(items) {
 // Handle category selection
 document.getElementById('categorySelect').addEventListener('change', (e) => {
   const newCategoryInput = document.getElementById('newCategory');
+  const editBtn = document.getElementById('editCategoryBtn');
+  
   if (e.target.value === 'new') {
     newCategoryInput.style.display = 'block';
     newCategoryInput.value = '';
+    newCategoryInput.readOnly = false;
+    editBtn.style.display = 'none';
   } else {
-    newCategoryInput.style.display = 'none';
+    newCategoryInput.style.display = 'block';
     newCategoryInput.value = e.target.value;
+    newCategoryInput.readOnly = true;
+    editBtn.style.display = 'block';
+  }
+});
+
+// Handle edit category button
+document.getElementById('editCategoryBtn').addEventListener('click', () => {
+  const newCategoryInput = document.getElementById('newCategory');
+  const editBtn = document.getElementById('editCategoryBtn');
+  
+  if (newCategoryInput.readOnly) {
+    // Enable editing
+    newCategoryInput.readOnly = false;
+    newCategoryInput.focus();
+    newCategoryInput.select();
+    editBtn.textContent = '✓ Save';
+    editBtn.style.background = '#27ae60';
+  } else {
+    // Save and lock
+    newCategoryInput.readOnly = true;
+    editBtn.textContent = '✏️ Edit Category Name';
+    editBtn.style.background = '';
+    showMessage('Category name updated! You can now add the item.');
   }
 });
 

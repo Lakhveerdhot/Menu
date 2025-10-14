@@ -572,8 +572,46 @@ async function placeOrder(event) {
 
 // Close success modal
 function closeSuccess() {
-{{ ... }}
+    document.getElementById('successModal').classList.remove('active');
+    document.getElementById('overlay').classList.remove('active');
+}
+
+async function searchOrder() {
+    showProcessing(true);
+    const mobile = document.getElementById('mobileInput').value.trim();
+    const orderId = document.getElementById('orderIdInput').value.trim();
+
+    if (!mobile && !orderId) {
+        showProcessing(false);
+        alert('Please enter mobile number or order ID');
+        return;
+    }
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('errorMessage').style.display = 'none';
+    document.getElementById('searchSection').style.display = 'block';
+    document.getElementById('ordersListSection').style.display = 'none';
+    document.getElementById('orderDetailsSection').classList.remove('active');
+
+    try {
+        let queryParams = '';
+        if (mobile) queryParams = `mobile=${encodeURIComponent(mobile)}`;
+        if (orderId) queryParams = `orderId=${encodeURIComponent(orderId)}`;
+
+        const response = await fetch(`${API_BASE_URL}?path=orders&${queryParams}`);
+        const data = await response.json();
+
+        if (data.success && data.data && data.data.length > 0) {
+            if (data.data.length === 1) {
+                displayOrderDetails(data.data[0]);
+            } else {
+                displayOrdersList(data.data);
+            }
+            showProcessing(false);
+        } else {
+            document.getElementById('loading').style.display = 'none';
             document.getElementById('errorMessage').style.display = 'block';
+            showProcessing(false);
         }
     } catch (error) {
         console.error('Error searching orders:', error);
@@ -585,7 +623,10 @@ function closeSuccess() {
 
 function displayOrdersList(orders) {
     document.getElementById('loading').style.display = 'none';
-{{ ... }}
+    document.getElementById('searchSection').style.display = 'none';
+    document.getElementById('ordersListSection').style.display = 'block';
+    document.getElementById('orderDetailsSection').classList.remove('active');
+    showProcessing(false);
 
     const ordersHtml = orders.map(order => {
         const statusClass = getStatusClass(order.status);

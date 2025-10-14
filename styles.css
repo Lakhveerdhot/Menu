@@ -1576,3 +1576,25 @@ form {
     font-size: 1em;
     background: white;
 }
+
+#newCategory[readonly] {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    color: #666;
+}
+
+#editCategoryBtn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s;
+}
+
+#editCategoryBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
