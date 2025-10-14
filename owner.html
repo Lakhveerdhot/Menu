@@ -14,8 +14,13 @@
         <p class="tagline">Control panel for admins and staff</p>
       </div>
       <div class="header-right">
-        <label>Secret: <input id="adminSecret" type="password" placeholder="Enter admin/staff secret"></label>
-        <button id="loadBtn" class="btn small">Login</button>
+        <div class="secret-row">
+          <label for="adminSecret">Secret:</label>
+          <input id="adminSecret" type="password" class="secret-input" placeholder="Enter admin/staff secret" aria-label="admin secret">
+          <label class="show-secret"><input id="showSecret" type="checkbox"> Show</label>
+          <label class="remember"><input id="rememberSecret" type="checkbox"> Keep logged in</label>
+          <button id="loadBtn" class="btn large">Login</button>
+        </div>
       </div>
     </header>
 

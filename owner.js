@@ -30,9 +30,32 @@ async function whoAmI() {
   }
 }
 
+// helper: get/set secret from sessionStorage
+function setSecret(s) { try { if (document.getElementById('rememberSecret').checked) sessionStorage.setItem('ownerSecret', s); else sessionStorage.setItem('ownerSecret', s); } catch(e){} }
+function getSecret() { try { return sessionStorage.getItem('ownerSecret') || document.getElementById('adminSecret').value; } catch(e){ return document.getElementById('adminSecret').value; } }
+
+// auto-login if secret present
+window.addEventListener('load', () => {
+  const s = getSecret();
+  if (s) {
+    document.getElementById('adminSecret').value = s;
+    document.getElementById('rememberSecret').checked = true;
+    document.getElementById('loadBtn').click();
+  }
+});
+
+// allow Enter to login
+document.getElementById('adminSecret').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('loadBtn').click(); });
+
+// show/hide secret
+document.getElementById('showSecret').addEventListener('change', (e) => { document.getElementById('adminSecret').type = e.target.checked ? 'text' : 'password'; });
+
+// main login handler
 document.getElementById('loadBtn').addEventListener('click', async () => {
   try {
-    const identity = await whoAmI();
+  const secretVal = document.getElementById('adminSecret').value;
+  setSecret(secretVal);
+  const identity = await whoAmI();
     if (!identity.success) return showMessage('Auth failed: ' + identity.error);
     const role = identity.role || 'staff';
     document.getElementById('ownerControls').style.display = 'block';
@@ -43,22 +66,33 @@ document.getElementById('loadBtn').addEventListener('click', async () => {
     hdr.innerHTML = `<strong>Role:</strong> ${role.toUpperCase()}`;
     document.getElementById('ownerControls').prepend(hdr);
 
-    const res = await callAdmin('admin-list-menu');
-    if (!res.success) return showMessage('Failed to load: ' + res.error);
-    // show controls
+    // fetch menu and orders in parallel for speed
+    const [menuRes, ord] = await Promise.all([callAdmin('admin-list-menu'), callAdmin('admin-today-orders')]);
+    if (!menuRes.success) return showMessage('Failed to load menu: ' + menuRes.error);
     document.getElementById('ownerControls').style.display = 'block';
-    renderOwnerList(res.data, role);
-
-    // load today's orders for staff/admin
-    const ord = await callAdmin('admin-today-orders');
+    renderOwnerList(menuRes.data, role);
     if (ord.success) {
       renderOrders(ord.data);
       document.getElementById('stat-orders-today').textContent = ord.count || ord.data.length || 0;
-      // simple revenue calculation
       const revenue = ord.data.reduce((s,o)=>s+(o.total||0),0);
       document.getElementById('stat-revenue').textContent = '₹' + revenue.toFixed(2);
       document.getElementById('stat-clients').textContent = ord.count || ord.data.length || 0;
     }
+
+    // poll for new orders every 10 seconds
+    if (window._orderPoll) clearInterval(window._orderPoll);
+    window._orderPoll = setInterval(async () => {
+      try {
+        const upd = await callAdmin('admin-today-orders');
+        if (upd.success) {
+          // naive update: re-render orders if count changed
+          const oldCount = document.querySelectorAll('#ordersTable tbody tr').length;
+          if ((upd.count || upd.data.length) !== oldCount) {
+            renderOrders(upd.data);
+          }
+        }
+      } catch (e) { console.warn('poll error', e); }
+    }, 10000);
   } catch (e) { showMessage('Error', e); }
 });
 
