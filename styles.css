@@ -302,6 +302,7 @@ body.modal-open {
     height: 200px;
     overflow: hidden;
     background: var(--light-color);
+    display: block;
 }
 
 .item-image img {
@@ -322,9 +323,16 @@ body.modal-open {
     flex-direction: column;
 }
 
-/* Menu items without images */
+/* Menu items without images - completely hide image area */
 .menu-item-no-image {
     padding: 20px;
+}
+
+.menu-item-no-image .item-image {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .menu-item-no-image .item-content {
