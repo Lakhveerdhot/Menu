@@ -333,10 +333,19 @@ body.modal-open {
     height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
 }
 
 .menu-item-no-image .item-content {
     padding: 0;
+}
+
+/* Force hide any image container in no-image items */
+.menu-item-no-image > .item-image,
+.menu-item-no-image .item-image,
+.menu-item.menu-item-no-image .item-image {
+    display: none !important;
 }
 
 .item-header {
