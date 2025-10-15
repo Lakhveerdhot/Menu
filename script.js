@@ -340,11 +340,14 @@ function renderMenu() {
             </div>
         `;
 
-        if (item.image && item.image.trim() !== '') {
+        // Check if item has a valid image URL
+        const hasValidImage = item.image && typeof item.image === 'string' && item.image.trim() !== '' && item.image.trim() !== 'null' && item.image.trim() !== 'undefined';
+        
+        if (hasValidImage) {
             return `
             <div class="menu-item">
                 <div class="item-image">
-                    <img src="${item.image}" alt="${item.name}">
+                    <img src="${item.image}" alt="${item.name}" onerror="this.parentElement.style.display='none'">
                 </div>
                 <div class="item-content">
                     <div class="item-header">
