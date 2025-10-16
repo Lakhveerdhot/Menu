@@ -111,19 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const orderData = localStorage.getItem('addToOrder');
         if (orderData) {
             const order = JSON.parse(orderData);
-            order.items.forEach(item => {
-                const existingItem = cart.find(i => sameItem(i, item));
-                if (existingItem) {
-                    existingItem.quantity += item.quantity;
-                } else {
-                    cart.push({ ...item, id: String(item.id) });
-                }
-            });
-            mergeCartDuplicates();
-            updateCart();
-            renderMenu();
+            // Store existing order info for update
+            window.existingOrderId = order.orderId;
+            window.existingOrderItems = order.items;
+            window.existingOrderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            // Don't add existing items to cart - only new items will be added
             localStorage.removeItem('addToOrder');
-            showNotification('Previous order items added! Add more items and place order.');
+            showNotification('Add new items to existing order #' + order.orderId);
             toggleCart();
         }
     }
@@ -522,14 +517,37 @@ async function placeOrder(event) {
     
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    const orderData = {
-        tableNumber,
-        customerName,
-        mobile,
-        email: email || null,
-        items: cart,
-        total
-    };
+    // Check if this is an update to existing order
+    const isUpdateOrder = window.existingOrderId ? true : false;
+    
+    let orderData;
+    if (isUpdateOrder) {
+        // This is an update - send only new items with existing order ID
+        orderData = {
+            action: 'update-order',
+            orderId: window.existingOrderId,
+            tableNumber,
+            customerName,
+            mobile,
+            email: email || null,
+            existingItems: window.existingOrderItems,
+            existingTotal: window.existingOrderTotal,
+            newItems: cart,
+            newTotal: total,
+            total: window.existingOrderTotal + total
+        };
+    } else {
+        // This is a new order
+        orderData = {
+            action: 'place-order',
+            tableNumber,
+            customerName,
+            mobile,
+            email: email || null,
+            items: cart,
+            total
+        };
+    }
     
     const placeOrderBtn = document.getElementById('placeOrderBtn');
     placeOrderBtn.disabled = true;
@@ -545,7 +563,7 @@ async function placeOrder(event) {
             headers: {
                 'Content-Type': 'text/plain'
             },
-            body: JSON.stringify({ action: 'place-order', ...orderData }),
+            body: JSON.stringify(orderData),
             signal: controller.signal
         });
         
@@ -559,6 +577,11 @@ async function placeOrder(event) {
             document.getElementById('orderId').textContent = data.orderId;
             document.getElementById('checkoutModal').classList.remove('active');
             document.getElementById('successModal').classList.add('active');
+            
+            // Clear existing order data
+            window.existingOrderId = null;
+            window.existingOrderItems = null;
+            window.existingOrderTotal = null;
             
             cart = [];
             updateCart();

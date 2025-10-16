@@ -79,6 +79,9 @@ function doPost(e) {
       case 'place-order':
         return jsonResponse(placeOrder(data));
       
+      case 'update-order':
+        return jsonResponse(updateOrder(data));
+      
       case 'verify-order':
         return jsonResponse(verifyOrder(data));
       
@@ -221,6 +224,87 @@ function getMenu() {
 // ============================================
 // ORDER MANAGEMENT
 // ============================================
+
+// Update existing order with new items
+function updateOrder(data) {
+  try {
+    // Validate required fields
+    if (!data.orderId || !data.newItems || data.newItems.length === 0) {
+      return {
+        success: false,
+        error: 'Order ID and new items are required'
+      };
+    }
+    
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd/MM/yyyy, hh:mm:ss a');
+    
+    // Format items for email - separate existing and new items
+    const existingItemsString = data.existingItems.map(item => 
+      `${item.name} x${item.quantity} (₹${(item.price * item.quantity).toFixed(2)})`
+    ).join(', ');
+    
+    const newItemsString = data.newItems.map(item => 
+      `${item.name} x${item.quantity} (₹${(item.price * item.quantity).toFixed(2)})`
+    ).join(', ');
+    
+    // Combined items for sheet
+    const allItems = [...data.existingItems, ...data.newItems];
+    const allItemsString = allItems.map(item => 
+      `${item.name} x${item.quantity} (₹${(item.price * item.quantity).toFixed(2)})`
+    ).join(', ');
+    
+    // Save updated order to sheet
+    const sheetResult = saveOrderToSheet({
+      orderId: data.orderId + '-UPDATE',
+      timestamp: timestamp,
+      tableNumber: data.tableNumber,
+      customerName: data.customerName,
+      mobile: data.mobile,
+      email: data.email || 'N/A',
+      items: allItemsString,
+      total: Number(data.total)
+    });
+    
+    // Send emails with breakdown
+    try {
+      queueEmail({
+        orderId: data.orderId,
+        timestamp: timestamp,
+        tableNumber: data.tableNumber,
+        customerName: data.customerName,
+        mobile: data.mobile,
+        email: data.email || 'N/A',
+        items: allItems,
+        existingItems: data.existingItems,
+        newItems: data.newItems,
+        existingTotal: data.existingTotal,
+        newTotal: data.newTotal,
+        total: data.total,
+        isUpdate: true,
+        notifyCustomer: !!(data.email && data.email !== 'N/A' && CONFIG.CUSTOMER_EMAIL_ENABLED),
+        notifyOwner: !!CONFIG.OWNER_EMAIL
+      });
+    } catch (emailError) {
+      Logger.log('Email queue error (non-critical): ' + emailError.toString());
+    }
+    
+    return {
+      success: true,
+      message: 'Order updated successfully!',
+      orderId: data.orderId,
+      timestamp: timestamp,
+      sheetInfo: sheetResult
+    };
+    
+  } catch (error) {
+    Logger.log('Error updating order: ' + error.toString());
+    return {
+      success: false,
+      error: 'Failed to update order: ' + error.toString()
+    };
+  }
+}
+
 function placeOrder(data) {
   try {
     // Validate required fields
@@ -573,37 +657,84 @@ function getHealthCheck() {
 // EMAIL FUNCTIONS
 // ============================================
 function sendCustomerEmail(orderDetails) {
-  const subject = `Order Confirmation - ${orderDetails.orderId}`;
+  const isUpdate = orderDetails.isUpdate || false;
+  const subject = isUpdate ? `Order Updated - ${orderDetails.orderId}` : `Order Confirmation - ${orderDetails.orderId}`;
   
-  const itemsList = orderDetails.items.map(item => 
-    `<li><strong>${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
-  ).join('');
+  let itemsSection = '';
+  
+  if (isUpdate) {
+    // Show breakdown for updated orders
+    const existingItemsList = orderDetails.existingItems.map(item => 
+      `<li><strong>${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
+    ).join('');
+    
+    const newItemsList = orderDetails.newItems.map(item => 
+      `<li style="color: #27ae60;"><strong>${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)} <span style="background: #27ae60; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.8em;">NEW</span></li>`
+    ).join('');
+    
+    itemsSection = `
+      <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="color: #333; margin-top: 0;">📦 Previous Items</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${existingItemsList}
+        </ul>
+        <div style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin-top: 10px;">
+          <strong>Previous Total: ₹${orderDetails.existingTotal.toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #27ae60;">
+        <h3 style="color: #27ae60; margin-top: 0;">✨ New Items Added</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${newItemsList}
+        </ul>
+        <div style="padding: 10px; background: white; border-radius: 5px; margin-top: 10px;">
+          <strong style="color: #27ae60;">New Items Total: ₹${orderDetails.newTotal.toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 3px solid #ff6b35;">
+        <div style="text-align: center;">
+          <strong style="font-size: 1.4em; color: #ff6b35;">FINAL TOTAL: ₹${orderDetails.total.toFixed(2)}</strong>
+        </div>
+      </div>
+    `;
+  } else {
+    // Regular order
+    const itemsList = orderDetails.items.map(item => 
+      `<li><strong>${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
+    ).join('');
+    
+    itemsSection = `
+      <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="color: #333; margin-top: 0;">🍴 Your Items</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${itemsList}
+        </ul>
+        <div style="border-top: 2px solid #ff6b35; padding-top: 15px; margin-top: 15px;">
+          <strong style="font-size: 1.2em;">Total: ₹${orderDetails.total.toFixed(2)}</strong>
+        </div>
+      </div>
+    `;
+  }
   
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; text-align: center; color: white;">
         <h1 style="margin: 0;">🍽️ ${CONFIG.RESTAURANT_NAME}</h1>
-        <p style="margin: 10px 0 0 0;">Order Confirmation</p>
+        <p style="margin: 10px 0 0 0;">${isUpdate ? 'Order Updated' : 'Order Confirmation'}</p>
       </div>
       
       <div style="padding: 30px; background: #f9f9f9;">
         <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-          <h2 style="color: #ff6b35; margin-top: 0;">✅ Order Placed Successfully!</h2>
+          <h2 style="color: #ff6b35; margin-top: 0;">${isUpdate ? '🔄 Order Updated Successfully!' : '✅ Order Placed Successfully!'}</h2>
           <p>Thank you for your order, <strong>${orderDetails.customerName}</strong>!</p>
           <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
           <p><strong>Table:</strong> ${orderDetails.tableNumber}</p>
           <p><strong>Time:</strong> ${orderDetails.timestamp}</p>
         </div>
         
-        <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-          <h3 style="color: #333; margin-top: 0;">🍴 Your Items</h3>
-          <ul style="list-style: none; padding: 0;">
-            ${itemsList}
-          </ul>
-          <div style="border-top: 2px solid #ff6b35; padding-top: 15px; margin-top: 15px;">
-            <strong style="font-size: 1.2em;">Total: ₹${orderDetails.total.toFixed(2)}</strong>
-          </div>
-        </div>
+        ${itemsSection}
         
         <div style="background: #fff3e0; padding: 15px; border-radius: 10px;">
           <p style="margin: 0;">Your order is being prepared and will be served shortly!</p>
@@ -627,16 +758,72 @@ function sendCustomerEmail(orderDetails) {
 }
 
 function sendOwnerEmail(orderDetails) {
-  const subject = `🔔 New Order - Table ${orderDetails.tableNumber} - ${orderDetails.orderId}`;
+  const isUpdate = orderDetails.isUpdate || false;
+  const subject = isUpdate ? `🔄 Order Updated - Table ${orderDetails.tableNumber} - ${orderDetails.orderId}` : `🔔 New Order - Table ${orderDetails.tableNumber} - ${orderDetails.orderId}`;
   
-  const itemsList = orderDetails.items.map(item => 
-    `<li><strong style="font-size: 1.1em;">${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
-  ).join('');
+  let itemsSection = '';
+  
+  if (isUpdate) {
+    // Show breakdown for updated orders
+    const existingItemsList = orderDetails.existingItems.map(item => 
+      `<li><strong style="font-size: 1.1em;">${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
+    ).join('');
+    
+    const newItemsList = orderDetails.newItems.map(item => 
+      `<li style="color: #27ae60;"><strong style="font-size: 1.1em;">${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)} <span style="background: #27ae60; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.8em;">NEW</span></li>`
+    ).join('');
+    
+    itemsSection = `
+      <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="color: #333; margin-top: 0;">📦 Previous Items</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${existingItemsList}
+        </ul>
+        <div style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin-top: 10px;">
+          <strong>Previous Total: ₹${orderDetails.existingTotal.toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 3px solid #27ae60;">
+        <h3 style="color: #27ae60; margin-top: 0;">✨ NEW ITEMS TO PREPARE</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${newItemsList}
+        </ul>
+        <div style="padding: 10px; background: white; border-radius: 5px; margin-top: 10px;">
+          <strong style="color: #27ae60;">New Items Total: ₹${orderDetails.newTotal.toFixed(2)}</strong>
+        </div>
+      </div>
+      
+      <div style="background: #2e7d32; padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;">
+        <div style="text-align: center;">
+          <strong style="font-size: 1.5em;">FINAL BILL: ₹${orderDetails.total.toFixed(2)}</strong>
+          <p style="margin: 10px 0 0 0; font-size: 0.9em;">(Previous: ₹${orderDetails.existingTotal.toFixed(2)} + New: ₹${orderDetails.newTotal.toFixed(2)})</p>
+        </div>
+      </div>
+    `;
+  } else {
+    // Regular order
+    const itemsList = orderDetails.items.map(item => 
+      `<li><strong style="font-size: 1.1em;">${item.name}</strong> x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`
+    ).join('');
+    
+    itemsSection = `
+      <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="color: #333; margin-top: 0;">🍴 Ordered Items</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${itemsList}
+        </ul>
+        <div style="background: #e8f5e9; border-top: 3px solid #2e7d32; padding: 15px; margin-top: 15px; border-radius: 5px;">
+          <strong style="font-size: 1.3em; color: #2e7d32;">TOTAL: ₹${orderDetails.total.toFixed(2)}</strong>
+        </div>
+      </div>
+    `;
+  }
   
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #2c3e50, #34495e); padding: 30px; text-align: center; color: white;">
-        <h1 style="margin: 0;">🔔 New Order Received!</h1>
+        <h1 style="margin: 0;">${isUpdate ? '🔄 Order Updated!' : '🔔 New Order Received!'}</h1>
       </div>
       
       <div style="padding: 30px; background: #f9f9f9;">
@@ -653,18 +840,10 @@ function sendOwnerEmail(orderDetails) {
           <p><strong>Time:</strong> ${orderDetails.timestamp}</p>
         </div>
         
-        <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-          <h3 style="color: #333; margin-top: 0;">🍴 Ordered Items</h3>
-          <ul style="list-style: none; padding: 0;">
-            ${itemsList}
-          </ul>
-          <div style="background: #e8f5e9; border-top: 3px solid #2e7d32; padding: 15px; margin-top: 15px; border-radius: 5px;">
-            <strong style="font-size: 1.3em; color: #2e7d32;">TOTAL: ₹${orderDetails.total.toFixed(2)}</strong>
-          </div>
-        </div>
+        ${itemsSection}
         
-        <div style="background: #fff3e0; padding: 15px; border-radius: 10px;">
-          <p style="margin: 0; color: #e65100;"><strong>⚡ Action Required: Prepare this order for Table ${orderDetails.tableNumber}</strong></p>
+        <div style="background: ${isUpdate ? '#fff3e0' : '#fff3e0'}; padding: 15px; border-radius: 10px;">
+          <p style="margin: 0; color: #e65100;"><strong>⚡ Action Required: ${isUpdate ? 'Prepare NEW items for' : 'Prepare this order for'} Table ${orderDetails.tableNumber}</strong></p>
         </div>
       </div>
     </div>
