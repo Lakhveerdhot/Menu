@@ -255,6 +255,7 @@ document.getElementById('addItemBtn').addEventListener('click', async () => {
     showProcessing(false);
     return showMessage('Please select or enter a category');
   }
+  const idValue = document.getElementById('newId').value;
   const item = {
     name: document.getElementById('newName').value,
     category: categoryValue,
@@ -263,10 +264,26 @@ document.getElementById('addItemBtn').addEventListener('click', async () => {
     description: document.getElementById('newDescription').value,
     available: document.getElementById('newAvailable').checked
   };
+  
+  // Add optional ID if provided
+  if (idValue && Number(idValue) > 0) {
+    item.insertAtId = Number(idValue);
+  }
+  
   const res = await callAdmin('admin-add-item', { item });
   showProcessing(false);
   if (!res.success) return showMessage('Failed: ' + res.error);
-  showMessage('Added');
+  
+  // Clear form fields after successful addition
+  document.getElementById('newName').value = '';
+  document.getElementById('newCategory').value = '';
+  document.getElementById('newPrice').value = '';
+  document.getElementById('newImage').value = '';
+  document.getElementById('newDescription').value = '';
+  document.getElementById('newId').value = '';
+  document.getElementById('newAvailable').checked = true;
+  
+  showMessage(res.message || 'Item added successfully!');
   document.getElementById('loadBtn').click();
 });
 

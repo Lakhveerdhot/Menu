@@ -1128,17 +1128,86 @@ function adminAddItem(data) {
       sheet = ss.insertSheet(CONFIG.MENU_SHEET_NAME);
       sheet.appendRow(['id','name','description','price','category','image','available']);
     }
-    const id = data.item.id || 'id-' + Date.now();
+    
     const name = data.item.name || '';
     const description = data.item.description || '';
     const price = data.item.price || 0;
     const category = data.item.category || 'Other';
     const image = data.item.image || '';
     const available = data.item.available === false ? 'no' : 'yes';
-  sheet.appendRow([id,name,description,price,category,image,available]);
-  // invalidate menu cache so getMenu() will refresh
-  try { invalidateMenuCache(sheet); } catch(e){}
-    return { success: true, item: { id, name, description, price, category, image, available } };
+    
+    // Get all existing rows to determine IDs
+    const rows = sheet.getDataRange().getValues();
+    const header = rows[0].map(h => (h||'').toString().trim().toLowerCase());
+    const idCol = header.indexOf('id') >= 0 ? header.indexOf('id') : 0;
+    
+    // Check if user wants to insert at specific position
+    const insertAtId = data.item.insertAtId;
+    
+    if (insertAtId && insertAtId > 0) {
+      // Insert at specific position and update all subsequent IDs
+      let insertRowIndex = -1;
+      
+      // Find the row with the target ID
+      for (let i = 1; i < rows.length; i++) {
+        const currentId = parseInt(rows[i][idCol]) || 0;
+        if (currentId === insertAtId) {
+          insertRowIndex = i + 1; // +1 because sheet rows are 1-indexed
+          break;
+        }
+      }
+      
+      // If target ID not found, check if it's beyond current range
+      if (insertRowIndex === -1) {
+        const maxId = Math.max(...rows.slice(1).map(r => parseInt(r[idCol]) || 0));
+        if (insertAtId > maxId) {
+          // Append at end with the specified ID
+          sheet.appendRow([insertAtId, name, description, price, category, image, available]);
+          try { invalidateMenuCache(sheet); } catch(e){}
+          return { 
+            success: true, 
+            message: `Item added at position ${insertAtId}`,
+            item: { id: insertAtId, name, description, price, category, image, available } 
+          };
+        } else {
+          return { success: false, error: `ID ${insertAtId} not found in menu` };
+        }
+      }
+      
+      // Insert new row at the target position
+      sheet.insertRowBefore(insertRowIndex);
+      sheet.getRange(insertRowIndex, 1, 1, 7).setValues([[insertAtId, name, description, price, category, image, available]]);
+      
+      // Update all subsequent IDs (increment by 1)
+      const updatedRows = sheet.getDataRange().getValues();
+      for (let i = insertRowIndex; i < updatedRows.length; i++) {
+        const currentId = parseInt(updatedRows[i][idCol]) || 0;
+        if (currentId >= insertAtId && i !== insertRowIndex - 1) {
+          sheet.getRange(i + 1, idCol + 1).setValue(currentId + 1);
+        }
+      }
+      
+      try { invalidateMenuCache(sheet); } catch(e){}
+      return { 
+        success: true, 
+        message: `Item inserted at position ${insertAtId}. All subsequent items shifted.`,
+        item: { id: insertAtId, name, description, price, category, image, available } 
+      };
+      
+    } else {
+      // No specific ID provided - generate sequential ID based on count
+      const existingIds = rows.slice(1).map(r => parseInt(r[idCol]) || 0).filter(id => id > 0);
+      const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+      
+      sheet.appendRow([nextId, name, description, price, category, image, available]);
+      try { invalidateMenuCache(sheet); } catch(e){}
+      return { 
+        success: true, 
+        message: `Item added with ID ${nextId}`,
+        item: { id: nextId, name, description, price, category, image, available } 
+      };
+    }
+    
   } catch (e) {
     return { success: false, error: e.toString() };
   }
